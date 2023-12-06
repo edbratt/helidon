@@ -20,6 +20,7 @@
                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                   xsi:schemaLocation="https://helidon.io/archetype/2.0 https://helidon.io/xsd/archetype-2.0.xsd">
 
+    <exec src="multi-module.xml"/>
     <output>
         <transformation id="mustache">
             <replace regex="\.mustache$" replacement=""/>
@@ -41,7 +42,7 @@
             <includes>
                 <include>.helidon.mustache</include>
                 <include>README.md.mustache</include>
-                <include>app.yaml.mustache</include>
+                <include>src/main/java/module-info.java.mustache</include>
             </includes>
         </templates>
         <model>

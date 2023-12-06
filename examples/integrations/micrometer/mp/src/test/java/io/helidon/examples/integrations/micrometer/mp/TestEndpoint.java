@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Oracle and/or its affiliates.
+ * Copyright (c) 2021, 2023 Oracle and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +20,13 @@ import io.helidon.microprofile.tests.junit5.HelidonTest;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.inject.Inject;
-import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.WebTarget;
 import jakarta.ws.rs.core.MediaType;
 import org.junit.jupiter.api.Test;
 
 import static io.helidon.examples.integrations.micrometer.mp.GreetResource.PERSONALIZED_GETS_COUNTER_NAME;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 @HelidonTest
 public class TestEndpoint {
@@ -41,27 +40,27 @@ public class TestEndpoint {
     @Test
     public void pingGreet() {
 
-        JsonObject jsonObject = webTarget
+        GreetingMessage message = webTarget
                  .path("/greet/Joe")
                  .request(MediaType.APPLICATION_JSON_TYPE)
-                 .get(JsonObject.class);
+                 .get(GreetingMessage.class);
 
-        String responseString = jsonObject.getString("message");
+        String responseString = message.getMessage();
 
-        assertEquals("Hello Joe!", responseString, "Response string");
+        assertThat("Response string", responseString, is("Hello Joe!"));
         Counter counter = registry.counter(PERSONALIZED_GETS_COUNTER_NAME);
         double before = counter.count();
 
-        jsonObject = webTarget
+        message = webTarget
                 .path("/greet/Jose")
                 .request(MediaType.APPLICATION_JSON_TYPE)
-                .get(JsonObject.class);
+                .get(GreetingMessage.class);
 
-        responseString = jsonObject.getString("message");
+        responseString = message.getMessage();
 
-        assertEquals("Hello Jose!", responseString, "Response string");
+        assertThat("Response string", responseString, is("Hello Jose!"));
         double after = counter.count();
-        assertEquals(1d, after - before, "Difference in personalized greeting counter between successive calls");
+        assertThat("Difference in personalized greeting counter between successive calls", after - before, is(1d));
 
     }
 }

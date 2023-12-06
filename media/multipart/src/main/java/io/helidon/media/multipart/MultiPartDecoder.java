@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Oracle and/or its affiliates.
+ * Copyright (c) 2020, 2023 Oracle and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,8 +55,8 @@ public class MultiPartDecoder implements Processor<DataChunk, ReadableBodyPart> 
     private Iterator<MimeParser.ParserEvent> parserIterator = EMPTY_PARSER_ITERATOR;
     private volatile Throwable error;
     private boolean cancelled;
-    private AtomicInteger contenders = new AtomicInteger(Integer.MIN_VALUE);
-    private AtomicLong partsRequested = new AtomicLong();
+    private final AtomicInteger contenders = new AtomicInteger(Integer.MIN_VALUE);
+    private final AtomicLong partsRequested = new AtomicLong();
     private final HashMap<Integer, DataChunk> chunksByIds;
     private final MimeParser parser;
     private final MessageBodyReaderContext context;
@@ -139,7 +139,12 @@ public class MultiPartDecoder implements Processor<DataChunk, ReadableBodyPart> 
         try {
             ByteBuffer[] byteBuffers = chunk.data();
             for (int i = 0; i < byteBuffers.length; i++) {
-                int id = parser.offer(byteBuffers[i]);
+                ByteBuffer byteBuffer = byteBuffers[i];
+                if (!byteBuffer.hasRemaining()) {
+                    // skip if empty
+                    continue;
+                }
+                int id = parser.offer(byteBuffer);
                 // record the chunk using the id of the last buffer
                 if (i == byteBuffers.length - 1) {
                     // drain() cannot be invoked concurrently, it is safe to use HashMap
@@ -417,7 +422,7 @@ public class MultiPartDecoder implements Processor<DataChunk, ReadableBodyPart> 
         public void subscribe(Subscriber<? super DataChunk> sub) {
             if (!chunksRequested.compareAndSet(Long.MIN_VALUE + 1, Long.MIN_VALUE)) {
                 Multi.<DataChunk>error(new IllegalStateException("Only one Subscriber allowed"))
-                     .subscribe(subscriber);
+                     .subscribe(sub);
                 return;
             }
 
@@ -498,6 +503,10 @@ public class MultiPartDecoder implements Processor<DataChunk, ReadableBodyPart> 
          */
         boolean drain() {
             long requested = chunksRequested.get();
+            if (requested == Long.MIN_VALUE + 1) {
+                // Not subscribed yet
+                return false;
+            }
             long chunksEmitted = 0;
 
             // requested < 0 behaves like cancel, i.e drain bufferEntryIterator

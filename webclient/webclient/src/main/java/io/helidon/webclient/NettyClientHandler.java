@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022 Oracle and/or its affiliates.
+ * Copyright (c) 2020, 2023 Oracle and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -141,6 +141,9 @@ class NettyClientHandler extends SimpleChannelInboundHandler<HttpObject> {
             WebClientResponse clientResponse = responseBuilder.build();
             channel.attr(RESPONSE).set(clientResponse);
 
+            requestConfiguration.cookieManager().put(requestConfiguration.requestURI(),
+                                                     clientResponse.headers().toMap());
+
             for (HttpInterceptor interceptor : HTTP_INTERCEPTORS) {
                 if (interceptor.shouldIntercept(response.status(), requestConfiguration)) {
                     boolean continueAfter = !interceptor.continueAfterInterception();
@@ -153,9 +156,6 @@ class NettyClientHandler extends SimpleChannelInboundHandler<HttpObject> {
                     }
                 }
             }
-
-            requestConfiguration.cookieManager().put(requestConfiguration.requestURI(),
-                                                     clientResponse.headers().toMap());
 
             WebClientServiceResponse clientServiceResponse =
                     new WebClientServiceResponseImpl(requestConfiguration.context().get(),
@@ -265,8 +265,10 @@ class NettyClientHandler extends SimpleChannelInboundHandler<HttpObject> {
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         CompletableFuture<WebClientResponse> responseFuture = ctx.channel().attr(RESULT).get();
         if (responseFuture.isDone()) {
-            // we failed during entity processing
-            publisher.fail(cause);
+            // we failed during entity processing, or during connecting to the remote site
+            if (publisher != null) {
+                publisher.fail(cause);
+            }
         } else {
             // we failed before getting response
             responseFuture.completeExceptionally(cause);

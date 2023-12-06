@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2021 Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2023 Oracle and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ import javax.crypto.spec.PBEKeySpec;
 /**
  * Reads a PEM file and converts it into a list of DERs so that they are imported into a {@link java.security.KeyStore} easily.
  */
-final class PemReader {
+public final class PemReader {
     private static final Logger LOGGER = Logger.getLogger(PemReader.class.getName());
 
     private static final Pattern CERT_PATTERN = Pattern.compile(
@@ -91,12 +91,11 @@ final class PemReader {
     }
 
     static PrivateKey readPrivateKey(InputStream input, char[] password) {
-
         PrivateKeyInfo pkInfo = readPrivateKeyBytes(input);
 
         switch (pkInfo.type) {
         case "PKCS1-RSA":
-            return rsaPrivateKey(pkcs1RsaKeySpec(pkInfo.bytes));
+            return rsaPrivateKey(Pkcs1Util.pkcs1RsaKeySpec(pkInfo.bytes));
         case "PKCS1-DSA":
             throw new UnsupportedOperationException("PKCS#1 DSA private key is not supported");
         case "PKCS1-EC":
@@ -105,11 +104,6 @@ final class PemReader {
         default:
             return pkcs8(generateKeySpec(pkInfo.bytes, password));
         }
-    }
-
-    private static KeySpec pkcs1RsaKeySpec(byte[] bytes) {
-        DerUtils.checkEnabled();
-        return DerUtils.pkcs1RsaKeySpec(bytes);
     }
 
     private static PrivateKey pkcs8(KeySpec keySpec) {
@@ -157,7 +151,13 @@ final class PemReader {
         }
     }
 
-    static List<X509Certificate> readCertificates(InputStream certStream) {
+    /**
+     * Reads a certificate-based input stream and converts it to a list of {@link X509Certificate}s.
+     *
+     * @param certStream cert input stream
+     * @return list of certificates
+     */
+    public static List<X509Certificate> readCertificates(InputStream certStream) {
         CertificateFactory cf;
         try {
             cf = CertificateFactory.getInstance("X.509");
@@ -223,7 +223,7 @@ final class PemReader {
         return new X509EncodedKeySpec(bytes);
     }
 
-    private static PrivateKeyInfo readPrivateKeyBytes(InputStream in) {
+    static PrivateKeyInfo readPrivateKeyBytes(InputStream in) {
         String content;
         try {
             content = readContent(in);

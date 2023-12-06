@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2021 Oracle and/or its affiliates.
+ * Copyright (c) 2020, 2023 Oracle and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,15 +24,12 @@ import jakarta.json.JsonArray;
 import jakarta.json.JsonObject;
 import jakarta.ws.rs.client.WebTarget;
 import jakarta.ws.rs.core.Response;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 @HelidonTest
-@Disabled("3.0.0-JAKARTA") // Micronaut - validation Error instantiating bean of type
-// [io.helidon.examples.integrations.micronaut.data.DbPopulateData$ApplicationEventListener$init1$Intercepted]:
-// Error loading bean [io.micronaut.validation.ValidatingInterceptor]: javax/validation/Validator
 class MicronautExampleTest {
     @Inject
     private WebTarget webTarget;
@@ -43,7 +40,7 @@ class MicronautExampleTest {
                 .request()
                 .get(JsonArray.class);
 
-        assertEquals(3, jsonValues.size(), "We should get all pets");
+        assertThat("We should get all pets", jsonValues.size(), is(3));
     }
 
     @Test
@@ -52,8 +49,8 @@ class MicronautExampleTest {
                 .request()
                 .get(JsonObject.class);
 
-        assertEquals("Dino", pet.getString("name"));
-        assertEquals(Pet.PetType.DOG.toString(), pet.getString("type"));
+        assertThat(pet.getString("name"), is("Dino"));
+        assertThat(pet.getString("type"), is(Pet.PetType.DOG.toString()));
     }
 
     @Test
@@ -61,7 +58,7 @@ class MicronautExampleTest {
         try (Response response = webTarget.path("/pets/Fino")
                 .request()
                 .get()) {
-            assertEquals(404, response.getStatus(), "Should be not found: 404");
+            assertThat("Should be not found: 404", response.getStatus(), is(404));
         }
     }
 
@@ -70,7 +67,7 @@ class MicronautExampleTest {
         try (Response response = webTarget.path("/pets/a")
                 .request()
                 .get()) {
-            assertEquals(400, response.getStatus(), "Should be bad request: 400");
+            assertThat("Should be bad request: 400", response.getStatus(), is(400));
         }
     }
 

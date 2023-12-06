@@ -19,7 +19,6 @@
 = Helidon MP Config Guide
 :description: Helidon configuration
 :keywords: helidon, configuration, microprofile, guide
-:toc:
 :rootdir: {docdir}/../..
 
 include::{rootdir}/includes/mp.adoc[]
@@ -539,11 +538,14 @@ spec:
       name: http
 ---
 kind: Deployment
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 metadata:
   name: helidon-config
 spec:
   replicas: 1 // <2>
+  selector:
+    matchLabels:
+      app: helidon-config
   template:
     metadata:
       labels:

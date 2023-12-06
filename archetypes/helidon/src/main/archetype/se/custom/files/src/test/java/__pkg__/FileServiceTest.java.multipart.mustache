@@ -1,6 +1,14 @@
 
 package {{package}};
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.Duration;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
 import io.helidon.common.http.MediaType;
 import io.helidon.media.jsonp.JsonpSupport;
 import io.helidon.media.multipart.FileFormParams;
@@ -18,13 +26,6 @@ import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -35,14 +36,14 @@ import static org.hamcrest.Matchers.notNullValue;
  * Tests {@link FileService}.
  */
 @TestMethodOrder(OrderAnnotation.class)
-public class FileServiceTest {
+class FileServiceTest {
 
     private static WebServer webServer;
     private static WebClient webClient;
 
     @BeforeAll
-    public static void startTheServer() {
-        webServer = Main.startServer().await();
+    static void startTheServer() {
+        webServer = Main.startServer().await(Duration.ofSeconds(5));
 
         webClient = WebClient.builder()
                              .baseUri("http://localhost:8080/multipart")
@@ -52,7 +53,7 @@ public class FileServiceTest {
     }
 
     @AfterAll
-    public static void stopServer() {
+    static void stopServer() {
         if (webServer != null) {
             webServer.shutdown()
                     .await(10, TimeUnit.SECONDS);
@@ -61,7 +62,7 @@ public class FileServiceTest {
 
     @Test
     @Order(1)
-    public void testUpload() throws IOException {
+    void testUpload() throws IOException {
         Path file = Files.write( Files.createTempFile(null, null), "bar\n".getBytes(StandardCharsets.UTF_8));
         WebClientResponse response = webClient
                 .post()
@@ -69,13 +70,13 @@ public class FileServiceTest {
                 .submit(FileFormParams.builder()
                                       .addFile("file[]", "foo.txt", file)
                                       .build())
-                .await();
+                .await(Duration.ofSeconds(5));
         assertThat(response.status().code(), is(200));
     }
 
     @Test
     @Order(2)
-    public void testStreamUpload() throws IOException {
+    void testStreamUpload() throws IOException {
         Path file = Files.write( Files.createTempFile(null, null), "stream bar\n".getBytes(StandardCharsets.UTF_8));
         Path file2 = Files.write( Files.createTempFile(null, null), "stream foo\n".getBytes(StandardCharsets.UTF_8));
         WebClientResponse response = webClient
@@ -92,14 +93,14 @@ public class FileServiceTest {
 
     @Test
     @Order(3)
-    public void testList() {
+    void testList() {
         WebClientResponse response = webClient
                 .get()
                 .contentType(MediaType.APPLICATION_JSON)
                 .request()
-                .await();
+                .await(Duration.ofSeconds(5));
         assertThat(response.status().code(), Matchers.is(200));
-        JsonObject json = response.content().as(JsonObject.class).await();
+        JsonObject json = response.content().as(JsonObject.class).await(Duration.ofSeconds(2));
         assertThat(json, Matchers.is(notNullValue()));
         List<String> files = json.getJsonArray("files").getValuesAs(v -> ((JsonString) v).getString());
         assertThat(files, hasItem("foo.txt"));
@@ -107,17 +108,17 @@ public class FileServiceTest {
 
     @Test
     @Order(4)
-    public void testDownload() {
+    void testDownload() {
         WebClientResponse response = webClient
                 .get()
                 .path("foo.txt")
                 .accept(MediaType.APPLICATION_OCTET_STREAM)
                 .request()
-                .await();
+                .await(Duration.ofSeconds(5));
         assertThat(response.status().code(), is(200));
         assertThat(response.headers().first("Content-Disposition").orElse(null),
                 containsString("filename=\"foo.txt\""));
-        byte[] bytes = response.content().as(byte[].class).await();
+        byte[] bytes = response.content().as(byte[].class).await(Duration.ofSeconds(2));
         assertThat(new String(bytes, StandardCharsets.UTF_8), Matchers.is("bar\n"));
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2022 Oracle and/or its affiliates.
+ * Copyright (c) 2019, 2023 Oracle and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -83,6 +83,7 @@ class WebClientConfiguration {
     private final URI uri;
     private final boolean validateHeaders;
     private final boolean relativeUris;
+    private final DnsResolverType dnsResolverType;
 
     /**
      * Creates a new instance of client configuration.
@@ -113,6 +114,7 @@ class WebClientConfiguration {
         this.keepAlive = builder.keepAlive;
         this.validateHeaders = builder.validateHeaders;
         this.relativeUris = builder.relativeUris;
+        this.dnsResolverType = builder.dnsResolverType;
     }
 
     /**
@@ -285,6 +287,10 @@ class WebClientConfiguration {
         return relativeUris;
     }
 
+    DnsResolverType dnsResolverType() {
+        return dnsResolverType;
+    }
+
     /**
      * A fluent API builder for {@link WebClientConfiguration}.
      */
@@ -316,6 +322,7 @@ class WebClientConfiguration {
         private MessageBodyWriterContext writerContext;
         private boolean validateHeaders;
         private boolean relativeUris;
+        private DnsResolverType dnsResolverType;
         @SuppressWarnings("unchecked")
         private B me = (B) this;
 
@@ -521,7 +528,7 @@ class WebClientConfiguration {
         }
 
         /**
-         * Sets specific context in which all of the requests will be running.
+         * Sets specific context in which all the requests will be running.
          *
          * @return updated builder instance
          */
@@ -535,9 +542,22 @@ class WebClientConfiguration {
          *
          * @return updated builder instance
          */
-        @ConfiguredOption(type = String.class)
+        @ConfiguredOption(type = String.class,
+                          description = "Base URI for each request")
         public B uri(URI uri) {
             this.uri = uri;
+            return me;
+        }
+
+        /**
+         * Set which type of DNS resolver should be used.
+         *
+         * @param dnsResolverType dns resolver type to be used
+         * @return updated builder instance
+         */
+        @ConfiguredOption
+        public B dnsResolverType(DnsResolverType dnsResolverType) {
+            this.dnsResolverType = dnsResolverType;
             return me;
         }
 
@@ -584,7 +604,7 @@ class WebClientConfiguration {
             return me;
         }
 
-        private B enableAutomaticCookieStore(Boolean enableAutomaticCookieStore) {
+        B enableAutomaticCookieStore(Boolean enableAutomaticCookieStore) {
             this.enableAutomaticCookieStore = enableAutomaticCookieStore;
             return me;
         }
@@ -615,8 +635,14 @@ class WebClientConfiguration {
             return me;
         }
 
+        /**
+         * Enable keep alive option on the connection.
+         *
+         * @param keepAlive keep alive value
+         * @return updated builder instance
+         */
         @ConfiguredOption("true")
-        B keepAlive(boolean keepAlive) {
+        public B keepAlive(boolean keepAlive) {
             this.keepAlive = keepAlive;
             return me;
         }
@@ -700,6 +726,9 @@ class WebClientConfiguration {
                     .ifPresent(this::proxy);
             config.get("media-support").as(MediaContext::create).ifPresent(this::mediaContext);
             config.get("relative-uris").asBoolean().ifPresent(this::relativeUris);
+            config.get("dns-resolver-type").asString()
+                    .map(s -> DnsResolverType.valueOf(s.toUpperCase()))
+                    .ifPresent(this::dnsResolverType);
             return me;
         }
 
@@ -727,6 +756,7 @@ class WebClientConfiguration {
             context(configuration.context);
             keepAlive(configuration.keepAlive);
             validateHeaders(configuration.validateHeaders);
+            dnsResolverType(configuration.dnsResolverType);
             configuration.cookieManager.defaultCookies().forEach(this::defaultCookie);
             config = configuration.config;
 

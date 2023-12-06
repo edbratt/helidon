@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022 Oracle and/or its affiliates.
+ * Copyright (c) 2022, 2023 Oracle and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,28 +15,25 @@
  */
 package io.helidon.integrations.oci.sdk.cdi;
 
-import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.security.CodeSource;
+import java.security.ProtectionDomain;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.function.UnaryOperator;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -44,7 +41,6 @@ import java.util.regex.Pattern;
 import com.oracle.bmc.Service;
 import com.oracle.bmc.auth.AbstractAuthenticationDetailsProvider;
 import com.oracle.bmc.common.ClientBuilderBase;
-import com.oracle.bmc.http.ClientConfigurator;
 import jakarta.enterprise.event.Event;
 import jakarta.enterprise.event.Observes;
 import jakarta.enterprise.inject.AmbiguousResolutionException;
@@ -58,15 +54,10 @@ import jakarta.enterprise.inject.spi.Extension;
 import jakarta.enterprise.inject.spi.InjectionPoint;
 import jakarta.enterprise.inject.spi.ProcessInjectionPoint;
 import jakarta.enterprise.util.TypeLiteral;
+import jakarta.inject.Provider;
 import jakarta.inject.Singleton;
 import org.eclipse.microprofile.config.Config;
 import org.eclipse.microprofile.config.ConfigProvider;
-import shaded.com.oracle.oci.javasdk.javax.ws.rs.Priorities;
-import shaded.com.oracle.oci.javasdk.javax.ws.rs.client.Client;
-import shaded.com.oracle.oci.javasdk.javax.ws.rs.client.ClientBuilder;
-import shaded.com.oracle.oci.javasdk.javax.ws.rs.client.ClientRequestContext;
-import shaded.com.oracle.oci.javasdk.javax.ws.rs.client.ClientRequestFilter;
-import shaded.com.oracle.oci.javasdk.javax.ws.rs.core.UriBuilder;
 
 import static java.lang.invoke.MethodType.methodType;
 
@@ -625,37 +616,16 @@ public final class OciExtension implements Extension {
 
     private void processInjectionPoint(@Observes ProcessInjectionPoint<?, ?> event) {
         InjectionPoint ip = event.getInjectionPoint();
-        Type baseType = ip.getAnnotated().getBaseType();
-        if (!(baseType instanceof Class)) {
-            // Optimization: all OCI constructs we're interested in
-            // are non-generic classes (and not therefore
-            // ParameterizedTypes or GenericArrayTypes).
-            return;
-        }
-        Class<?> baseClass = (Class<?>) baseType;
-        String baseClassName = baseClass.getName();
-        if (!baseClassName.startsWith(OCI_PACKAGE_PREFIX)) {
-            // Optimization: the set of classes we're interested in is
-            // a subset of general OCI-related classes.
-            return;
-        }
-        Set<Annotation> qualifiers = ip.getQualifiers();
-        if (AbstractAuthenticationDetailsProvider.class.isAssignableFrom(baseClass)
-            || AdpSelectionStrategy.builderClasses().contains(baseClass)) {
-            // Use an "empty" ServiceTaqs as an indicator of demand
-            // for some kind of AbstractAuthenticationDetailsProvider
-            // (or a relevant builder).
-            this.serviceTaqs.add(new ServiceTaqs(qualifiers.toArray(EMPTY_ANNOTATION_ARRAY)));
-            return;
-        }
-        Matcher m = SERVICE_CLIENT_CLASS_NAME_SUBSTRING_PATTERN.matcher(baseClassName.substring(OCI_PACKAGE_PREFIX.length()));
-        if (!m.matches() || this.isVetoed(baseClass)) {
-            return;
-        }
-        this.processServiceClientInjectionPoint(event::addDefinitionError,
-                                                baseClass,
-                                                qualifiers,
-                                                OCI_PACKAGE_PREFIX + m.group(1));
+        processInjectionPoint(ip.getAnnotated().getBaseType(),
+                              ip.getQualifiers(),
+                              event::addDefinitionError);
+    }
+
+    private void processProviderInjectionPoint(@Observes ProcessInjectionPoint<?, ? extends Provider<?>> event) {
+        InjectionPoint ip = event.getInjectionPoint();
+        processInjectionPoint(((ParameterizedType) ip.getAnnotated().getBaseType()).getActualTypeArguments()[0],
+                              ip.getQualifiers(),
+                              event::addDefinitionError);
     }
 
     private void afterBeanDiscovery(@Observes AfterBeanDiscovery event, BeanManager bm) {
@@ -718,15 +688,47 @@ public final class OciExtension implements Extension {
         // not further process the class in question.  The class
         // remains eligible for further processing; i.e. this is not a
         // CDI veto.
-        if (this.additionalVetoes.contains(c.getName())) {
+        if (equals(Service.class.getProtectionDomain(), c.getProtectionDomain())
+                || this.additionalVetoes.contains(c.getName())) {
             LOGGER.fine(() -> "Vetoed " + c);
             return true;
         }
         return false;
     }
 
+    private void processInjectionPoint(Type type,
+                                       Set<Annotation> qualifiers,
+                                       Consumer<? super ClassNotFoundException> errorHandler) {
+        if (!(type instanceof Class)) {
+            // Optimization: all OCI constructs we're interested in are non-generic classes (and not therefore
+            // ParameterizedTypes or GenericArrayTypes).
+            return;
+        }
+        Class<?> c = (Class<?>) type;
+        String className = c.getName();
+        if (!className.startsWith(OCI_PACKAGE_PREFIX)) {
+            // Optimization: the set of classes we're interested in is a subset of general OCI-related classes.
+            return;
+        }
+        if (AbstractAuthenticationDetailsProvider.class.isAssignableFrom(c)
+            || AdpSelectionStrategy.builderClasses().contains(c)) {
+            // Register an "empty" ServiceTaqs as an indicator of demand for some kind of
+            // AbstractAuthenticationDetailsProvider (or a relevant builder).
+            this.serviceTaqs.add(new ServiceTaqs(qualifiers.toArray(EMPTY_ANNOTATION_ARRAY)));
+            return;
+        }
+        Matcher m = SERVICE_CLIENT_CLASS_NAME_SUBSTRING_PATTERN.matcher(className.substring(OCI_PACKAGE_PREFIX.length()));
+        if (!m.matches() || this.isVetoed(c)) {
+            return;
+        }
+        this.processServiceClientInjectionPoint(errorHandler,
+                                                c,
+                                                qualifiers,
+                                                OCI_PACKAGE_PREFIX + m.group(1));
+    }
+
     private void processServiceClientInjectionPoint(Consumer<? super ClassNotFoundException> errorHandler,
-                                                    Class<?> baseClass,
+                                                    Class<?> c,
                                                     Set<Annotation> qualifiers,
                                                     String serviceInterfaceName) {
         Annotation[] qualifiersArray = qualifiers.toArray(EMPTY_ANNOTATION_ARRAY);
@@ -736,12 +738,12 @@ public final class OciExtension implements Extension {
         //   ....example.Example
         //   ....example.ExampleClient
         //   ....example.ExampleClient$Builder
-        Class<?> serviceInterfaceClass = toClassUnresolved(errorHandler, baseClass, serviceInterfaceName, lenient);
+        Class<?> serviceInterfaceClass = toClassUnresolved(errorHandler, c, serviceInterfaceName, lenient);
         if (serviceInterfaceClass != null && serviceInterfaceClass.isInterface()) {
             String serviceClient = serviceInterfaceName + "Client";
-            Class<?> serviceClientClass = toClassUnresolved(errorHandler, baseClass, serviceClient, lenient);
+            Class<?> serviceClientClass = toClassUnresolved(errorHandler, c, serviceClient, lenient);
             if (serviceClientClass != null && serviceInterfaceClass.isAssignableFrom(serviceClientClass)) {
-                Class<?> serviceClientBuilderClass = toClassUnresolved(errorHandler, baseClass, serviceClient + "$Builder", true);
+                Class<?> serviceClientBuilderClass = toClassUnresolved(errorHandler, c, serviceClient + "$Builder", true);
                 if (serviceClientBuilderClass == null) {
                     serviceClientBuilderClass = toClassUnresolved(errorHandler, serviceClient + "Builder", lenient);
                 }
@@ -765,14 +767,14 @@ public final class OciExtension implements Extension {
         //   ....example.ExampleAsyncClient
         //   ....example.ExampleAsyncClient$Builder
         String serviceAsyncInterface = serviceInterfaceName + "Async";
-        Class<?> serviceAsyncInterfaceClass = toClassUnresolved(errorHandler, baseClass, serviceAsyncInterface, lenient);
+        Class<?> serviceAsyncInterfaceClass = toClassUnresolved(errorHandler, c, serviceAsyncInterface, lenient);
         if (serviceAsyncInterfaceClass != null && serviceAsyncInterfaceClass.isInterface()) {
             String serviceAsyncClient = serviceAsyncInterface + "Client";
-            Class<?> serviceAsyncClientClass = toClassUnresolved(errorHandler, baseClass, serviceAsyncClient, lenient);
+            Class<?> serviceAsyncClientClass = toClassUnresolved(errorHandler, c, serviceAsyncClient, lenient);
             if (serviceAsyncClientClass != null
                 && serviceAsyncInterfaceClass.isAssignableFrom(serviceAsyncClientClass)) {
                 Class<?> serviceAsyncClientBuilderClass =
-                    toClassUnresolved(errorHandler, baseClass, serviceAsyncClient + "$Builder", true);
+                    toClassUnresolved(errorHandler, c, serviceAsyncClient + "$Builder", true);
                 if (serviceAsyncClientBuilderClass == null) {
                     serviceAsyncClientBuilderClass = toClassUnresolved(errorHandler, serviceAsyncClient + "Builder", lenient);
                 }
@@ -970,7 +972,6 @@ public final class OciExtension implements Extension {
         }
         // Permit arbitrary customization.
         fire(instance, builderInstance, qualifiers);
-        customizeEndpointResolution(builderInstance);
         return builderInstance;
     }
 
@@ -1018,16 +1019,42 @@ public final class OciExtension implements Extension {
         }
     }
 
+    private static boolean equals(ProtectionDomain pd0, ProtectionDomain pd1) {
+        if (pd0 == null) {
+            return pd1 == null;
+        } else if (pd1 == null) {
+            return false;
+        }
+        return equals(pd0.getCodeSource(), pd1.getCodeSource());
+    }
+
+    private static boolean equals(CodeSource cs0, CodeSource cs1) {
+        if (cs0 == null) {
+            return cs1 == null;
+        } else if (cs1 == null) {
+            return false;
+        }
+        return equals(cs0.getLocation(), cs1.getLocation());
+    }
+
+    private static boolean equals(URL url0, URL url1) {
+        if (url0 == null) {
+            return url1 == null;
+        } else if (url1 == null) {
+            return false;
+        }
+        try {
+            return Objects.equals(url0.toURI(), url1.toURI());
+        } catch (URISyntaxException uriSyntaxException) {
+            // Use URL#equals(Object) only as a last resort, since it
+            // involves DNS lookups (!).
+            return url0.equals(url1);
+        }
+    }
+
     private static Class<?> loadClassUnresolved(String name) throws ClassNotFoundException {
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
         return Class.forName(name, false, cl == null ? OciExtension.class.getClassLoader() : cl);
-    }
-
-    private static void customizeEndpointResolution(ClientBuilderBase<?, ?> clientBuilder) {
-        EndpointAdjuster ea = EndpointAdjuster.of(clientBuilder.getClass().getName());
-        if (ea != null) {
-            clientBuilder.additionalClientConfigurator(ea);
-        }
     }
 
 
@@ -1278,160 +1305,6 @@ public final class OciExtension implements Extension {
             } else {
                 return false;
             }
-        }
-
-    }
-
-    private enum EndpointAdjuster implements ClientConfigurator, ClientRequestFilter, Predicate<ClientRequestContext> {
-
-
-        /*
-         * Enum constants.
-         */
-
-
-        // See
-        // https://docs.oracle.com/en-us/iaas/tools/java/latest/com/oracle/bmc/monitoring/MonitoringAsync.html#postMetricData-com.oracle.bmc.monitoring.requests.PostMetricDataRequest-com.oracle.bmc.responses.AsyncHandler-:
-        //
-        //   The endpoints for this [particular POST] operation differ
-        //   from other Monitoring operations. Replace the string
-        //   telemetry with telemetry-ingestion in the endpoint, as in
-        //   the following example:
-        //
-        //   https://telemetry-ingestion.eu-frankfurt-1.oraclecloud.com
-        //
-        // Doing this in an application that uses a MonitoringClient
-        // or a MonitoringAsyncClient from several threads, not all of
-        // which are POSTing, is, of course, unsafe, since a thread
-        // performing a GET operation using the client might use the
-        // POSTing endpoint.  This filter repairs this flaw and is
-        // installed by OCI-SDK-supported client customization
-        // facilities.
-        //
-        // The documented instructions above are imprecise.  This filter
-        // implements what it seems was actually meant:
-        //
-        //   The OCI hostname to which metrics should be POSTed must
-        //   be a specific hostname that is derived from, but not
-        //   equal to, the automatically computed hostname used for
-        //   all other HTTP operations initiated by the Monitoring
-        //   service client. This specific custom hostname must be
-        //   derived as follows:
-        //
-        //     If the automatically computed hostname begins with
-        //     "telemetry.", replace only that occurrence of
-        //     "telemetry."  with "telemetry-ingestion.".  The
-        //     resulting hostname is the derived hostname to use for
-        //     POSTing metrics and for no other purpose.
-        MONITORING(crc -> {
-                if ("POST".equalsIgnoreCase(crc.getMethod())) {
-                    URI uri = crc.getUri();
-                    if (uri != null) {
-                        String host = uri.getHost();
-                        if (host != null && host.startsWith("telemetry.")) {
-                            String path = uri.getPath();
-                            return path != null && path.endsWith("/metrics");
-                        }
-                    }
-                }
-                return false;
-            },
-            h -> "telemetry-ingestion." + h.substring("telemetry.".length())
-            );
-
-
-        /*
-         * Static fields.
-         */
-
-
-        private static final Map<String, EndpointAdjuster> ENDPOINT_ADJUSTERS;
-
-        static {
-            Map<String, EndpointAdjuster> map = new HashMap<>();
-            for (EndpointAdjuster ea : EnumSet.allOf(EndpointAdjuster.class)) {
-                map.put(ea.clientBuilderClassName, ea);
-                map.put(ea.asyncClientBuilderClassName, ea);
-            }
-            ENDPOINT_ADJUSTERS = Collections.unmodifiableMap(map);
-        }
-
-
-        /*
-         * Instance fields.
-         */
-
-
-        private final String clientBuilderClassName;
-
-        private final String asyncClientBuilderClassName;
-
-        private final Predicate<? super ClientRequestContext> suitabilityTester;
-
-        private final UnaryOperator<String> adjuster;
-
-
-        /*
-         * Constructors.
-         */
-
-
-        EndpointAdjuster(Predicate<? super ClientRequestContext> suitabilityTester,
-                         UnaryOperator<String> adjuster) {
-            String lowerCaseName = this.name().toLowerCase();
-            String titleCaseName = Character.toUpperCase(lowerCaseName.charAt(0)) + lowerCaseName.substring(1);
-            String prefix = OCI_PACKAGE_PREFIX + lowerCaseName + "." + titleCaseName;
-            this.clientBuilderClassName = prefix + "Client$Builder";
-            this.asyncClientBuilderClassName = prefix + "AsyncClient$Builder";
-            this.suitabilityTester = suitabilityTester;
-            this.adjuster = adjuster;
-        }
-
-
-        /*
-         * Instance methods.
-         */
-
-
-        @Override // ClientConfigurator
-        public void customizeBuilder(ClientBuilder builder) {
-            builder.register(this, Map.of(ClientRequestFilter.class, Integer.valueOf(Priorities.AUTHENTICATION - 500)));
-        }
-
-        @Override // Predicate<ClientRequestContext>
-        public final boolean test(ClientRequestContext crc) {
-            return this.suitabilityTester.test(crc);
-        }
-
-        @Override // ClientRequestFilter
-        public final void filter(ClientRequestContext crc) throws IOException {
-            if (this.test(crc)) {
-                URI uri = crc.getUri();
-                if (uri != null) {
-                    String hostname = uri.getHost();
-                    if (hostname != null) {
-                        this.adjust(crc, hostname);
-                    }
-                }
-            }
-        }
-
-        private void adjust(ClientRequestContext crc, String hostname) {
-            crc.setUri(UriBuilder.fromUri(crc.getUri()).host(this.adjuster.apply(hostname)).build());
-        }
-
-        @Override // ClientConfigurator
-        public void customizeClient(Client client) {
-        }
-
-
-        /*
-         * Static methods.
-         */
-
-
-        private static EndpointAdjuster of(String clientBuilderClassName) {
-            return ENDPOINT_ADJUSTERS.get(clientBuilderClassName);
         }
 
     }

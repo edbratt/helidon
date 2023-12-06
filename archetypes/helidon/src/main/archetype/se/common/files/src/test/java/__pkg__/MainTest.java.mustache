@@ -17,8 +17,7 @@ import {{.}};
 import {{.}};
 {{/MainTest-static-imports}}
 
-@TestMethodOrder(MethodOrderer.MethodName.class)
-public class MainTest {
+class MainTest {
 
 {{#MainTest-static-fields}}
 {{.}}
@@ -28,8 +27,8 @@ public class MainTest {
     private static WebClient webClient;
 
     @BeforeAll
-    public static void startTheServer() {
-        webServer = Main.startServer().await();
+    static void startTheServer() {
+        webServer = Main.startServer().await(Duration.ofSeconds(10));
 
         webClient = WebClient.builder()
                 .baseUri("http://localhost:" + webServer.port())
@@ -40,11 +39,9 @@ public class MainTest {
     }
 
     @AfterAll
-    public static void stopServer() throws Exception {
+    static void stopServer() {
         if (webServer != null) {
-            webServer.shutdown()
-                    .toCompletableFuture()
-                    .get(10, TimeUnit.SECONDS);
+            webServer.shutdown().await(10, TimeUnit.SECONDS);
         }
     }
 

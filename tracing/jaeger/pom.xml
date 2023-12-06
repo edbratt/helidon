@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Copyright (c) 2019, 2022 Oracle and/or its affiliates.
+    Copyright (c) 2019, 2023 Oracle and/or its affiliates.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -17,12 +17,12 @@
 
 <project xmlns="http://maven.apache.org/POM/4.0.0"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>io.helidon.tracing</groupId>
         <artifactId>helidon-tracing-project</artifactId>
-        <version>3.0.1-SNAPSHOT</version>
+        <version>3.2.5-SNAPSHOT</version>
     </parent>
 
     <artifactId>helidon-tracing-jaeger</artifactId>
@@ -41,9 +41,26 @@
             <groupId>io.opentelemetry</groupId>
             <artifactId>opentelemetry-sdk</artifactId>
         </dependency>
+        <!-- For dependency convergence of kotlin-stdlib -->
+        <dependency>
+            <groupId>com.squareup.okio</groupId>
+            <artifactId>okio</artifactId>
+        </dependency>
         <dependency>
             <groupId>io.opentelemetry</groupId>
             <artifactId>opentelemetry-exporter-jaeger</artifactId>
+            <exclusions>
+                <!-- For dependency convergence. This excludes the transitive dep
+                     on kotlin from okhttp. We defer to the transitive dep from okio -->
+                <exclusion>
+                    <groupId>org.jetbrains.kotlin</groupId>
+                    <artifactId>kotlin-stdlib-jdk8</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.jetbrains.kotlin</groupId>
+                    <artifactId>kotlin-stdlib</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>io.helidon.tracing</groupId>
@@ -82,6 +99,13 @@
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
+        <!-- Hack to get around module issue in okio. See module-info.java -->
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-stdlib</artifactId>
+            <version>1.8.0</version>
+            <scope>provided</scope>
+        </dependency>
         <!--
          - Test dependencies
          -->
@@ -105,5 +129,61 @@
             <artifactId>helidon-config-yaml</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>io.helidon.common</groupId>
+            <artifactId>helidon-common-http</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.helidon.webserver</groupId>
+            <artifactId>helidon-webserver</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.helidon.webclient</groupId>
+            <artifactId>helidon-webclient</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.helidon.webclient</groupId>
+            <artifactId>helidon-webclient-tracing</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.oracle.bedrock</groupId>
+            <artifactId>bedrock-testing-support</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>default-test</id>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/B3HeadersPropagationCaseTest.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <!-- Run this test in a separate JVM so we don't init GlobalOpenTelemetry multiple times. -->
+                        <id>headers-propagation-test</id>
+                        <goals>
+                            <goal>test</goal>
+                        </goals>
+                        <configuration>
+                            <includes>
+                                <include>**/B3HeadersPropagationCaseTest.java</include>
+                            </includes>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>

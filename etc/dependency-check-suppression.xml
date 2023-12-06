@@ -12,142 +12,6 @@
    <cpe>cpe:/a:etcd:etcd</cpe>
 </suppress>
 
-<!-- GraalVM -->
-<!-- This suppresses multiple JDK CVEs related to running untrusted Java code.
-     These do not apply to Helidon's use of Java/GraalVM.
--->
-<suppress>
-   <notes><![CDATA[
-   file name: graal-sdk-21.3.0.jar
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/org\.graalvm\..*/.*@.*$</packageUrl>
-   <cve>CVE-2022-21248</cve>
-</suppress>
-<suppress>
-   <notes><![CDATA[
-   file name: graal-sdk-21.3.0.jar
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/org\.graalvm\..*/.*@.*$</packageUrl>
-   <cve>CVE-2022-21271</cve>
-</suppress>
-<suppress>
-   <notes><![CDATA[
-   file name: graal-sdk-21.3.0.jar
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/org\.graalvm\..*/.*@.*$</packageUrl>
-   <cve>CVE-2022-21277</cve>
-</suppress>
-<suppress>
-   <notes><![CDATA[
-   file name: graal-sdk-21.3.0.jar
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/org\.graalvm\..*/.*@.*$</packageUrl>
-   <cve>CVE-2022-21282</cve>
-</suppress>
-<suppress>
-   <notes><![CDATA[
-   file name: graal-sdk-21.3.0.jar
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/org\.graalvm\..*/.*@.*$</packageUrl>
-   <cve>CVE-2022-21283</cve>
-</suppress>
-<suppress>
-   <notes><![CDATA[
-   file name: graal-sdk-21.3.0.jar
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/org\.graalvm\..*/.*@.*$</packageUrl>
-   <cve>CVE-2022-21291</cve>
-</suppress>
-<suppress>
-   <notes><![CDATA[
-   file name: graal-sdk-21.3.0.jar
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/org\.graalvm\..*/.*@.*$</packageUrl>
-   <cve>CVE-2022-21293</cve>
-</suppress>
-<suppress>
-   <notes><![CDATA[
-   file name: graal-sdk-21.3.0.jar
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/org\.graalvm\..*/.*@.*$</packageUrl>
-   <cve>CVE-2022-21294</cve>
-</suppress>
-<suppress>
-   <notes><![CDATA[
-   file name: graal-sdk-21.3.0.jar
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/org\.graalvm\..*/.*@.*$</packageUrl>
-   <cve>CVE-2022-21296</cve>
-</suppress>
-<suppress>
-   <notes><![CDATA[
-   file name: graal-sdk-21.3.0.jar
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/org\.graalvm\..*/.*@.*$</packageUrl>
-   <cve>CVE-2022-21299</cve>
-</suppress>
-<suppress>
-   <notes><![CDATA[
-   file name: graal-sdk-21.3.0.jar
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/org\.graalvm\..*/.*@.*$</packageUrl>
-   <cve>CVE-2022-21305</cve>
-</suppress>
-<suppress>
-   <notes><![CDATA[
-   file name: graal-sdk-21.3.0.jar
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/org\.graalvm\..*/.*@.*$</packageUrl>
-   <cve>CVE-2022-21340</cve>
-</suppress>
-<suppress>
-   <notes><![CDATA[
-   file name: graal-sdk-21.3.0.jar
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/org\.graalvm\..*/.*@.*$</packageUrl>
-   <cve>CVE-2022-21341</cve>
-</suppress>
-<suppress>
-   <notes><![CDATA[
-   file name: graal-sdk-21.3.0.jar
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/org\.graalvm\..*/.*@.*$</packageUrl>
-   <cve>CVE-2022-21349</cve>
-</suppress>
-<suppress>
-   <notes><![CDATA[
-   file name: graal-sdk-21.3.0.jar
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/org\.graalvm\..*/.*@.*$</packageUrl>
-   <cve>CVE-2022-21360</cve>
-</suppress>
-<suppress>
-   <notes><![CDATA[
-   file name: graal-sdk-21.3.0.jar
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/org\.graalvm\..*/.*@.*$</packageUrl>
-   <cve>CVE-2022-21365</cve>
-</suppress>
-<suppress>
-   <notes><![CDATA[
-   file name: graal-sdk-21.3.0.jar
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/org\.graalvm\..*/.*@.*$</packageUrl>
-   <cve>CVE-2022-21366</cve>
-</suppress>
-
-<!-- grpc -->
-<!-- This was applying the version of opentracing-grpc to grpc
-     which triggered CVEs for older versions of grpc and grpc-js
--->
-<suppress>
-   <notes><![CDATA[
-   file name: opentracing-grpc-0.2.1.jar
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/io\.opentracing\.contrib/opentracing\-grpc@.*$</packageUrl>
-   <cpe>cpe:/a:grpc:grpc</cpe>
-</suppress>
-
 
 <!-- This CVE is against Neo4j through 3.4.18. We use Neo4j 4.x
      Helidon's Neo4j integration triggered a false positive due to it's 
@@ -161,80 +25,15 @@
    <cve>CVE-2021-34371</cve>
 </suppress>
 
-<!-- Neo4j driver bundles some netty components. This CVE "only impacts applications
-     running on Java version 6". We require Java 11 or newer.
-     Helidon's Netty version has already been upgraded to 4.1.77.Final (or newer) which does
-     not contain this CVE.
+<!-- False positive.
+     This CVE is against the H2 web admin console which we do not use
 -->
 <suppress>
    <notes><![CDATA[
-   file name: neo4j-java-driver-4.4.3.jar (shaded: io.netty:netty-transport:4.1.73.Final)
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/io\.netty/netty\-.*@4.1.73.Final$</packageUrl>
-   <cve>CVE-2022-24823</cve>
-</suppress>
-
-<!-- These files are being detected as an old version of Netty and raises false positives for
-     a number of old Netty CVEs.
--->
-<suppress>
-   <notes><![CDATA[
-   file name: netty-incubator-transport-native-io_uring-0.0.8.Final-linux-x86_64.jar
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/io\.netty\.incubator/netty\-incubator\-transport\-native\-io_uring@.*$</packageUrl>
-   <cpe>cpe:/a:netty:netty</cpe>
-</suppress>
-
-<!-- This package was being detected as an old version of com.google.code.gson:gson. The version 
-     of com.google.cod.gson:gson that is brought in transitively is 2.8.9 which does not 
-     contain this CVE.
--->
-<suppress>
-   <notes><![CDATA[
-   file name: google-http-client-gson-1.41.8.jar
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/com\.google\.http\-client/google\-http\-client\-gson@.*$</packageUrl>
-   <cve>CVE-2022-25647</cve>
-</suppress>
-
-<!-- False positive. This CVE is against Go-Yaml, a project we do not use.
-     Scanner mistakenly identifies Helidon's Yaml support as Go-Yaml v3.
--->
-<suppress>
-   <notes><![CDATA[
-   file name: io.helidon.config:helidon-config-yaml-mp:3.0.0-SNAPSHOT
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/io\.helidon\.config/helidon\-config\-yaml\-mp@.*$</packageUrl>
-   <cve>CVE-2022-28948</cve>
-</suppress>
-<suppress>
-   <notes><![CDATA[
-   file name: io.helidon.config:helidon-config-yaml:3.0.0-SNAPSHOT
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/io\.helidon\.config/helidon\-config\-yaml@.*$</packageUrl>
-   <cve>CVE-2022-28948</cve>
-</suppress>
-
-<!-- False positive. This CVE was against an older version of H2. See
-     https://github.com/jeremylong/DependencyCheck/issues/4555
--->
-<suppress>
-   <notes><![CDATA[
-   file name: h2-2.0.206.jar
+   file name: h2-2.1.212.jar
    ]]></notes>
    <packageUrl regex="true">^pkg:maven/com\.h2database/h2@.*$</packageUrl>
-   <vulnerabilityName>CVE-2018-14335</vulnerabilityName>
-</suppress>
-
-<!-- This CVE is against micronaut's Content Type header parsing. We never use micronaut classes
-     to parse the Content Type header. So this is N/A in our use of micronaut (for micronaut data).
--->
-<suppress>
-   <notes><![CDATA[
-   file name: micronaut-core-3.1.3.jar
-   ]]></notes>
-   <packageUrl regex="true">^pkg:maven/io\.micronaut/micronaut\-core@.*$</packageUrl>
-   <vulnerabilityName>CVE-2022-21700</vulnerabilityName>
+   <cve>CVE-2022-45868</cve>
 </suppress>
 
 <!-- okhttp is a transitive fourth party dependency of Jaeger client. This CVE is considered
@@ -251,44 +50,102 @@
    <vulnerabilityName>CVE-2021-0341</vulnerabilityName>
 </suppress>
 
-<!-- False Positive. This CVE is for an AWS patch mechanism for log4j, not log4j itself
-     See  https://github.com/jeremylong/DependencyCheck/issues/4637
+<!-- False Positive. This CVE is against graphql-java, not the microprofile-graphql-api
 -->
 <suppress>
    <notes><![CDATA[
-   file name: log4j-api-2.17.1.jar
+   file name: microprofile-graphql-api-2.0.jar
    ]]></notes>
-   <packageUrl regex="true">^pkg:maven/org\.apache\.logging\.log4j/log4j\-api@.*$</packageUrl>
-   <cve>CVE-2022-33915</cve>
+   <packageUrl regex="true">^pkg:maven/org\.eclipse\.microprofile\.graphql/microprofile\-graphql\-api@.*$</packageUrl>
+   <cve>CVE-2022-37734</cve>
 </suppress>
 
-<!-- False Positive. Matching "platform" in "junit-platform-" to "fan_platform" project.
-     See https://github.com/jeremylong/DependencyCheck/issues/4670
+<!-- False Positive. This CVE is against graphql-java, not graphql-java-dataloader
+     See https://github.com/jeremylong/DependencyCheck/issues/5641
 -->
 <suppress>
    <notes><![CDATA[
-   file name: junit-platform-commons-1.7.0.jar
+   file name: java-dataloader-3.1.0.jar
    ]]></notes>
-   <packageUrl regex="true">^pkg:maven/org\.junit\.platform/junit\-platform\-commons@.*$</packageUrl>
-   <cve>CVE-2022-31514</cve>
+   <packageUrl regex="true">^pkg:maven/com\.graphql\-java/java\-dataloader@.*$</packageUrl>
+   <cve>CVE-2023-28867</cve>
 </suppress>
 
-<!-- False Positive. Matching "pki" in "zipkin" to "pki-core" project.
-     See  https://github.com/jeremylong/DependencyCheck/issues/4692
+<!-- False Positive. This CVE is against H2 1.x.
 -->
 <suppress>
    <notes><![CDATA[
-   file name: zipkin-2.12.5.jar
+   file name: h2-2.1.212.jar
    ]]></notes>
-   <packageUrl regex="true">^pkg:maven/io\.zipkin\.zipkin2/zipkin@.*$</packageUrl>
-   <cve>CVE-2022-2393</cve>
+   <packageUrl regex="true">^pkg:maven/com\.h2database/h2@.*$</packageUrl>
+   <vulnerabilityName>CVE-2018-14335</vulnerabilityName>
 </suppress>
+
+<!-- This is a low priority CVE against a deprecated method in Guava. We don't use guava directly.
+     This CVE bounces in and out of being "fixed" in version 30 and later.
+-->
 <suppress>
    <notes><![CDATA[
-   file name: zipkin-reporter-2.12.0.jar
+   file name: guava-31.1-jre.jar
    ]]></notes>
-   <packageUrl regex="true">^pkg:maven/io\.zipkin\.reporter2/zipkin\-reporter@.*$</packageUrl>
-   <cve>CVE-2022-2393</cve>
+   <packageUrl regex="true">^pkg:maven/com\.google\.guava/guava@.*$</packageUrl>
+   <vulnerabilityName>CVE-2020-8908</vulnerabilityName>
+</suppress>
+
+<!-- False Positive. This does not apply to server Java deployment and certainly not to our use of graalvm SDK.
+    This vulnerability applies to Java deployments, typically in clients running sandboxed
+    Java Web Start applications or sandboxed Java applets, that load and run untrusted code
+    (e.g., code that comes from the internet) and rely on the Java sandbox for security. This
+    vulnerability does not apply to Java deployments, typically in servers, that load and run only trusted code 
+-->
+<suppress>
+   <notes><![CDATA[
+   file name: graal-sdk-22.3.0.jar
+   ]]></notes>
+   <packageUrl regex="true">^pkg:maven/org\.graalvm\.sdk/graal\-sdk@.*$</packageUrl>
+   <vulnerabilityName>CVE-2023-22006</vulnerabilityName>
+</suppress>
+
+<!-- 
+    This CVE is being disputed by the Jackson project and the community seems in agreement that this
+    CVE should be rejected. We are suppressing this for now to reduce noise in our scan and will
+    continue to monitor progress.
+    https://nvd.nist.gov/vuln/detail/CVE-2023-35116
+    https://github.com/FasterXML/jackson-databind/issues/3972
+
+-->
+<suppress>
+   <notes><![CDATA[
+   file name: jackson-databind-2.15.2.jar
+   ]]></notes>
+   <packageUrl regex="true">^pkg:maven/com\.fasterxml\.jackson\.core/jackson\-databind@.*$</packageUrl>
+   <cve>CVE-2023-35116</cve>
+</suppress>
+
+<!--
+    This CVE is is concerning proper use of Netty's hostname verification. Helidon enables hostname
+    verification by default and therefore this CVE does not apply. Some more info on the CVE here:
+    https://github.com/jeremylong/DependencyCheck/issues/5912
+-->
+<suppress>
+   <notes><![CDATA[
+   file name: netty-transport-4.1.100.Final.jar
+   ]]></notes>
+   <packageUrl regex="true">^pkg:maven/io\.netty/netty\-.*@.*$</packageUrl>
+   <cve>CVE-2023-4586</cve>
+</suppress>
+
+<!--
+    This is a FP. We have upgrade jgit to a fixed version, but it is still getting flagged.
+    Probably due to the funky version string used by jgit. See
+    https://github.com/jeremylong/DependencyCheck/issues/5943
+-->
+<suppress>
+   <notes><![CDATA[
+   file name: org.eclipse.jgit-6.7.0.202309050840-r.jar
+   ]]></notes>
+   <packageUrl regex="true">^pkg:maven/org\.eclipse\.jgit/org\.eclipse\.jgit@.*$</packageUrl>
+   <cve>CVE-2023-4759</cve>
 </suppress>
 
 

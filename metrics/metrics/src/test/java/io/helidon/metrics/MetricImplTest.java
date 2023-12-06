@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2021 Oracle and/or its affiliates.
+ * Copyright (c) 2018, 2023 Oracle and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@ package io.helidon.metrics;
 import java.io.StringReader;
 import java.util.List;
 import java.util.Optional;
+
+import io.helidon.metrics.MetricImpl;
 
 import jakarta.json.Json;
 import jakarta.json.JsonObject;
@@ -130,21 +132,25 @@ class MetricImplTest {
 
     @Test
     void testPrometheus() {
-        String expected = "# TYPE base_theName counter\n"
-                + "# HELP base_theName theDescription\n"
-                + "base_theName 45\n";
+        String expected = """
+                # TYPE base_theName counter
+                # HELP base_theName theDescription
+                base_theName 45
+                """;
         final StringBuilder sb = new StringBuilder();
-        impl.prometheusData(sb, implID, true);
+        impl.prometheusData(sb, implID, true, false);
         assertThat(sb.toString(), is(expected));
     }
 
     @Test
     void testPrometheusWithoutDescription() {
-        String expected = "# TYPE base_counterWithoutDescription counter\n"
-                + "# HELP base_counterWithoutDescription \n"
-                + "base_counterWithoutDescription 45\n";
+        String expected = """
+                # TYPE base_counterWithoutDescription counter
+                # HELP base_counterWithoutDescription\s
+                base_counterWithoutDescription 45
+                """;
         final StringBuilder sb = new StringBuilder();
-        implWithoutDescription.prometheusData(sb, implWithoutDescriptionID, true);
+        implWithoutDescription.prometheusData(sb, implWithoutDescriptionID, true, false);
         assertThat(sb.toString(), is(expected));
     }
 
@@ -152,7 +158,7 @@ class MetricImplTest {
     void testPrometheusWithoutTypeAndHelp() {
         String expected = "base_counterWithoutDescription 45\n";
         final StringBuilder sb = new StringBuilder();
-        implWithoutDescription.prometheusData(sb, implWithoutDescriptionID, false);
+        implWithoutDescription.prometheusData(sb, implWithoutDescriptionID, false, false);
         assertThat(sb.toString(), is(expected));
     }
 

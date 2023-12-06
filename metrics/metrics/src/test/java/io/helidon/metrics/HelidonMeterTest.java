@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2021 Oracle and/or its affiliates.
+ * Copyright (c) 2018, 2023 Oracle and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,11 +42,12 @@ import static org.hamcrest.Matchers.notNullValue;
  * Unit test for {@link HelidonMeter}.
  */
 class HelidonMeterTest {
-    private static final String EXPECTED_PROMETHEUS_START = "# TYPE application_requests_total counter\n"
-            + "# HELP application_requests_total Tracks the number of requests to the server\n"
-            + "application_requests_total 1000\n"
-            + "# TYPE application_requests_rate_per_second gauge\n"
-            + "application_requests_rate_per_second ";
+    private static final String EXPECTED_PROMETHEUS_START = """
+            # TYPE application_requests_total counter
+            # HELP application_requests_total Tracks the number of requests to the server
+            application_requests_total 1000
+            # TYPE application_requests_rate_per_second gauge
+            application_requests_rate_per_second\s""";
     private static HelidonMeter meter;
     private static MetricID meterID;
 
@@ -134,7 +135,7 @@ class HelidonMeterTest {
     @Test
     void testPrometheus() {
         final StringBuilder sb = new StringBuilder();
-        meter.prometheusData(sb, meterID, true);
+        meter.prometheusData(sb, meterID, true, false);
         String data = sb.toString();
 
         assertThat(data, startsWith(EXPECTED_PROMETHEUS_START));

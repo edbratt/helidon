@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
-    Copyright (c) 2018, 2022 Oracle and/or its affiliates.
+    Copyright (c) 2018, 2023 Oracle and/or its affiliates.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -19,12 +19,12 @@
 
 <project xmlns="http://maven.apache.org/POM/4.0.0"
         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>io.helidon.applications</groupId>
         <artifactId>helidon-mp</artifactId>
-        <version>3.0.1-SNAPSHOT</version>
+        <version>3.2.5-SNAPSHOT</version>
         <relativePath>../../../applications/mp/pom.xml</relativePath>
     </parent>
     <groupId>io.helidon.examples.todos</groupId>
@@ -42,6 +42,7 @@
         <version.datastax.driver.core>4.9.0</version.datastax.driver.core>
         <version.datastax.driver.query.builder>4.9.0</version.datastax.driver.query.builder>
         <version.codahale.metrics.core>3.0.2</version.codahale.metrics.core>
+        <version.lib.snakeyaml.override>1.32</version.lib.snakeyaml.override>
     </properties>
 
     <dependencyManagement>
@@ -57,17 +58,18 @@
                     </exclusion>
                 </exclusions>
             </dependency>
+            <dependency>
+                <groupId>org.yaml</groupId>
+                <artifactId>snakeyaml</artifactId>
+                <version>${version.lib.snakeyaml.override}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
     <dependencies>
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-        </dependency>
-        <dependency>
             <groupId>io.helidon.microprofile.bundles</groupId>
-            <artifactId>helidon-microprofile</artifactId>
+            <artifactId>helidon-microprofile-core</artifactId>
         </dependency>
         <dependency>
             <groupId>io.helidon.microprofile</groupId>
@@ -78,13 +80,24 @@
             <artifactId>helidon-security-providers-google-login</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.helidon.security.providers</groupId>
+            <artifactId>helidon-security-providers-http-sign</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.helidon.security.providers</groupId>
+            <artifactId>helidon-security-providers-abac</artifactId>
+        </dependency>
+        <dependency>
             <groupId>io.helidon.microprofile.tracing</groupId>
             <artifactId>helidon-microprofile-tracing</artifactId>
         </dependency>
         <dependency>
             <groupId>io.helidon.tracing</groupId>
             <artifactId>helidon-tracing-zipkin</artifactId>
-            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
         </dependency>
         <dependency>
             <groupId>com.datastax.cassandra</groupId>
@@ -98,11 +111,6 @@
         <dependency>
             <groupId>io.helidon.microprofile.tests</groupId>
             <artifactId>helidon-microprofile-tests-junit5</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.helidon.config</groupId>
-            <artifactId>helidon-config-mp</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

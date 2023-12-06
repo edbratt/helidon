@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
-    Copyright (c) 2018, 2022 Oracle and/or its affiliates.
+    Copyright (c) 2018, 2023 Oracle and/or its affiliates.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -21,15 +21,27 @@
 :keywords: helidon, reactive, reactive streams, reactive java, reactive webserver, tls
 :feature-name: WebServer
 :rootdir: {docdir}/..
+:requested-uri-discovery-inc: {rootdir}/includes/server/requested-uri-discovery.adoc
 
 include::{rootdir}/includes/se.adoc[]
 
 == Contents
 
-- <<Overview, Overview>>
+- <<Overview,Overview>>
 - <<Maven Coordinates, Maven Coordinates>>
 - <<Usage, Usage>>
 - <<Configuration, Configuration>>
+** <<Configuring the WebServer in Your Code, Configuring the WebServer in Your Code>>
+** <<Configuring the WebServer in a Configuration File, Configuring the WebServer in a Configuration File>>
+** <<Configuration Options, Configuration Options>>
+*** <<Routing, Routing>>
+*** <<Request Handling, Request Handling>>
+*** <<Error Handling, Error Handling>>
+- <<Supported Technologies, Supported Technologies>>
+** <<HTTP/2 Support, HTTP/2 Support>>
+** <<Static Content Support, Static Content Support>>
+** <<Jersey (JAX-RS) Support, Jersey (JAX-RS) Support>>
+** <<JSON Support, JSON Support>>
 - <<Reference, Reference>>
 - <<Additional Information, Additional Information>>
 
@@ -69,7 +81,7 @@ WebServer webServer = WebServer.builder()
       .build();
 ----
 
-=== Configuring the WebServer in a configuration file
+=== Configuring the WebServer in a Configuration File
 
 You can also define the configuration in a file.
 
@@ -98,7 +110,7 @@ just use `Config.create()`
 
 include::{rootdir}/config/io_helidon_webserver_WebServer.adoc[leveloffset=+2,tag=config]
 
-== Routing [[routing]]
+== Routing 
 Routing lets you use request matching criteria to bind requests to a `handler` that implements
 your custom business logic. Matching criteria include one or more *HTTP Method(s)* and, optionally,
 a request *path matcher*. Use the `RequestPredicate` class to specify more routing
@@ -293,7 +305,7 @@ To complete the request handling, you must send a response by calling the `res.s
 <1> handler that terminates the request handling for any HTTP method using the `/hello` path
 <2> send the response
 
-== Protocol Specific Routing
+=== Protocol Specific Routing
 Handling routes based on the protocol version is possible by registering specific routes
 on routing builder.
 
@@ -309,6 +321,76 @@ on routing builder.
 
 While `Http1Route` for Http/1 is always available with Helidon webserver,
 other routes like `Http2Route` for <<HTTP/2 Support, HTTP/2>> needs to be added as additional dependency.
+
+== Requested URI Discovery
+include::{requested-uri-discovery-inc}[tag=intro]
+
+=== Setting Up Requested URI Discovery Programmatically
+To set up requested URI discovery on the default socket for your server, use the link:{webserver-javadoc-base-url}/io/helidon/webserver/WebServer.Builder.html[`WebServer.Builder`]:
+[source,java]
+.Requested URI set-up for the default server socket
+----
+import io.helidon.common.configurable.AllowList;
+import static io.helidon.webserver.SocketConfiguration.RequestedUriDiscoveryType.FORWARDED;
+import static io.helidon.webserver.SocketConfiguration.RequestedUriDiscoveryType.X_FORWARDED;
+
+AllowList trustedProxies = AllowList.builder()
+        .addAllowedPattern(Pattern.compile("lb.+\\.mycorp\\.com"))
+        .addDenied("lbtest.mycorp.com")
+        .build(); // <1>
+
+WebServer.Builder builder = WebServer.builder()
+        .defaultSocket(s -> s
+                .host("localhost")
+                .port(0)
+                .requestedUriDiscoveryTypes(List.of(FORWARDED, X_FORWARDED)) // <2>
+                .trustedProxies(trustedProxies)) // <3>
+        .addRouting(yourRouting)
+        .config(serverConfig);
+----
+<1> Create the `AllowList` describing the intermediate networks nodes to trust and not trust. Presumably the `lbxxx.mycorp.com` nodes are trusted load balancers except for the test load balancer `lbtest`, and no other nodes are trusted.
+`AllowList` accepts prefixes, suffixes, predicates, regex patterns, and exact matches.
+See the link:{configurable-javadoc-base-url}/io/helidon/common/configurable/AllowList.html[`AllowList`] JavaDoc for complete information.
+<2> Use `Forwarded` first, then try `X-Forwarded-*` on each request.
+<3> Set the `AllowList` for trusted intermediaries.
+
+If you build your server with additional sockets, you can control requested URI discovery separately for each.
+
+=== Setting Up Requested URI Discovery using Configuration
+include::{requested-uri-discovery-inc}[tag=config-example-intro]
+
+[source,yaml]
+.Configuring requested URI behavior
+----
+server:
+  port: 0
+  requested-uri-discovery:
+    types: FORWARDED,X_FORWARDED
+    trusted-proxies:
+      allow:
+        pattern: "lb.*\\.mycorp\\.com"
+      deny:
+        exact: "lbtest.mycorp.com""
+----
+
+=== Obtaining the Requested URI Information
+Your code obtains the requested URI information from the Helidon server request object:
+
+[source,java]
+.Retrieving Requested URI Information
+----
+import io.helidon.common.http.UriInfo;
+
+public class MyHandler implements Handler {
+
+    @Override
+    public void accept(ServerRequest req, ServerResponse res) {
+        UriInfo uriInfo = req.requestedUri();
+        // ...
+    }
+}
+----
+See the link:{common-http-javadoc-base-url}/io/helidon/common/http/UriInfo.html[`UriInfo`] JavaDoc for more information.
 
 == Error Handling
 
@@ -372,7 +454,7 @@ are equivalent.
 <1> Call a downstream error handler with the `Throwable` instance.
 <2> Here, `req.next()` is the same as `req.next(ex)`. In both cases, the downstream error handler is called.
 
-=== Default error handling
+=== Default Error Handling
 If no user-defined error handler is matched, or if the last error handler of the
 exception called `req.next()`, then the exception is translated to an HTTP response as follows:
 
@@ -387,6 +469,7 @@ exception called `req.next()`, then the exception is translated to an HTTP respo
 * Otherwise, the exceptions are translated to an Internal Server Error HTTP
 error code `500`.
 
+== Supported Technologies
 == HTTP/2 Support
 
 Helidon supports HTTP/2 upgrade from HTTP/1, HTTP/2 without prior knowledge
@@ -394,7 +477,7 @@ and HTTP/2 with ALPN over TLS.
 HTTP/2 support is enabled in webserver by default when it's artifact is available on classpath.
 
 === Maven Coordinates
-To enable Http/2 support add the following dependency to your project's `pom.xml`.
+To enable HTTP/2 support add the following dependency to your project's `pom.xml`.
 
 [source,xml]
 ----
@@ -814,6 +897,16 @@ in the order it is registered with WebServer routing.
 This implies that if you register it last and another `Service` or
 `Handler` finishes the request, the service will not be invoked.
 
+To enable Access logging add the following dependency to project's `pom.xml`:
+
+[source,xml]
+----
+<dependency>
+    <groupId>io.helidon.webserver</groupId>
+    <artifactId>helidon-webserver-access-log</artifactId>
+</dependency>
+----
+
 
 === Configuring Access Log in your code
 
@@ -843,121 +936,8 @@ server:
 
 All options shown above are also available programmatically when using builder.
 
-=== Configuration Options
 
-The following configuration options can be defined:
-
-[cols="2,2,2,5", role="flex, sm10"]
-|===
-|Config key     |Default value      |Builder method     |Description
-
-|`enabled`      |`true`             |`enabled(boolean)`          |When this option is set to `false`, access logging will be disabled
-|`logger-name`  |`io.helidon.webserver.AccessLog` |`loggerName(String)` |Name of the logger to use when writing log entries
-|`format`       |`helidon`          |`helidonLogFormat()`, `commonLogFormat()`, `add(AccessLogEntry entry)` |Configuration of access log output,
-when `helidon` is defined, the Helidon log format (see below) is used.
-Can be configured to explicitly define log entries (see below as well)
-|`exclude-paths`|N/A|`excludePaths(List<String>)` | List of path patterns to exclude from access log. Path pattern syntax is as
-defined in `io.helidon.webserver.PathMatcher`. Can be used to exclude
-paths such as `/health` or `/metrics` to avoid cluttering log.
-
-|===
-
-=== Supported Log Formats
-
-==== Supported Log Entries
-
-The following log entries are supported in Helidon:
-
-[cols="2,2,5",role="flex, sm7"]
-|===
-|Config format  |Class (to use with builder)    |Description
-
-|%h                 |`HostLogEntry`                 |IP address of the remote host
-|%l                 |`UserIdLogEntry`               |Client identity, always undefined in Helidon
-|%u                 |`UserLogEntry`                 |The username of logged-in user (when Security is used)
-|%t                 |`TimestampLogEntry`            |The current timestamp
-|%r                 |`RequestLineLogEntry`          |The request line (method, path and HTTP version)
-|%s                 |`StatusLogEntry`               |The HTTP status returned to the client
-|%b                 |`SizeLogEntry`                 |The response entity size (if available)
-|%D                 |`TimeTakenLogEntry`            |The time taken in microseconds
-|%T                 |`TimeTakenLogEntry`            |The time taken in seconds
-|%{`header-name`}i  |`HeaderLogEntry`               |Value of a header (can have multiple such specification to write
-multiple headers)
-|===
-
-Currently we only support the entries defined above, with NO support for free text.
-
-==== Helidon Log Format
-When format is set to `helidon`, the format used is:
-
-`"%h %u %t %r %s %b %D"`
-
-The entries logged:
-
-1. IP Address
-2. Username of a logged-in user
-3. Timestamp
-4. Request Line
-5. HTTP Status code
-6. Entity size
-7. Time taken (microseconds)
-
-Access log example:
-
-[source, listing]
-----
-192.168.0.104 - [18/Jun/2019:22:28:55 +0200] "GET /greet/test HTTP/1.1" 200 53
-0:0:0:0:0:0:0:1 - [18/Jun/2019:22:29:00 +0200] "GET /metrics/vendor HTTP/1.1" 200 1658
-0:0:0:0:0:0:0:1 jack [18/Jun/2019:22:29:07 +0200] "PUT /greet/greeting HTTP/1.1" 200 21
-0:0:0:0:0:0:0:1 jill [18/Jun/2019:22:29:12 +0200] "PUT /greet/greeting HTTP/1.1" 403 0
-0:0:0:0:0:0:0:1 - [18/Jun/2019:22:29:17 +0200] "PUT /greet/greeting HTTP/1.1" 401 0
-----
-
-==== Common Log Format
-When format is set to `common`, the format used is:
-
-`"%h %l %u %t %r %s %b"`
-
-The entries logged:
-
-1. IP Address
-2. Client identity
-3. Username of a logged-in user
-4. Timestamp
-5. Request Line
-6. HTTP Status code
-7. Entity size
-
-Access log example:
-
-[source, listing]
-----
-192.168.0.104   - - [18/Jun/2019:22:28:55 +0200] "GET /greet/test HTTP/1.1" 200 53
-0:0:0:0:0:0:0:1 - - [18/Jun/2019:22:29:00 +0200] "GET /metrics/vendor HTTP/1.1" 200 1658
-0:0:0:0:0:0:0:1 - jack [18/Jun/2019:22:29:07 +0200] "PUT /greet/greeting HTTP/1.1" 200 21
-0:0:0:0:0:0:0:1 - jill [18/Jun/2019:22:29:12 +0200] "PUT /greet/greeting HTTP/1.1" 403 0
-0:0:0:0:0:0:0:1 - - [18/Jun/2019:22:29:17 +0200] "PUT /greet/greeting HTTP/1.1" 401 0
-----
-
-=== Configuring Access Log with Java util logging
-
-To support a separate file for Access log entries, Helidon provides a custom
-log handler, that extends the `FileHandler`.
-
-To log to a file `access.log` with appending records after restart, you can use the
-following configuration in `logging.properties`:
-
-[source, properties]
-.Logging configuration file
-----
-io.helidon.webserver.accesslog.AccessLogHandler.level=INFO
-io.helidon.webserver.accesslog.AccessLogHandler.pattern=access.log
-io.helidon.webserver.accesslog.AccessLogHandler.append=true
-
-io.helidon.webserver.AccessLog.level=INFO
-io.helidon.webserver.AccessLog.useParentHandlers=false
-io.helidon.webserver.AccessLog.handlers=io.helidon.webserver.accesslog.AccessLogHandler
-----
+include::{rootdir}/includes/server/access-log-config-common.adoc[leveloffset=+1]
 
 == TLS Configuration
 

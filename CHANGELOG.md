@@ -9,11 +9,444 @@ For Helidon 2.x releases please see [Helidon 2.x CHANGELOG.md](https://github.co
 
 For Helidon 1.x releases please see [Helidon 1.x CHANGELOG.md](https://github.com/oracle/helidon/blob/helidon-1.x/CHANGELOG.md)
 
-## [3.0.1-SNAPSHOT]
+## [3.2.4]
+
+This is a bugfix release of Helidon and is recommended for all users of Helidon 3.  Helidon 3 requires Java 17 or newer.
+
+### CHANGES
+
+- JPA: Adds a DialectFactory implementation to permit Hibernate to introspect database metadata properly when supporting container-mode JPA [7934](https://github.com/helidon-io/helidon/pull/7934)
+- OCI: Adds support for Provider-specializing injection points in OciExtension [8027](https://github.com/helidon-io/helidon/pull/8027)
+- OpenAPI: Correct errors in how OpenAPI generator config settings are set [7969](https://github.com/helidon-io/helidon/pull/7969)
+- WebClient: Properly removes a channel from the cache [7952](https://github.com/helidon-io/helidon/pull/7952)
+- Dependencies: Upgrade OCI SDK to 3.29.0 [8086](https://github.com/helidon-io/helidon/pull/8086)
+- Dependencies: Upgrade parsson to 1.0.5 [7960](https://github.com/helidon-io/helidon/pull/7960)
+- Dependencies: Upgrade to mysql-connector-j 8.2.0 [8016](https://github.com/helidon-io/helidon/pull/8016)
+- Dependencies: Upgrade to Tyrus 2.1.4 [7944](https://github.com/helidon-io/helidon/pull/7944)
+- Examples: Backports database-related information present on 4.x to 3.x archetypes [7936](https://github.com/helidon-io/helidon/pull/7936)
+- Examples: Corrects a case typo in the custom MP archetype that results in an invalid property being installed on UCP [7933](https://github.com/helidon-io/helidon/pull/7933)
+
+## [3.2.3]
+
+This is a bugfix release of Helidon and is recommended for all users of Helidon 3.  Helidon 3 requires Java 17 or newer.
+
+### CHANGES
+
+- Config: Fix SeConfig.asMap to not truncate keys [7457](https://github.com/helidon-io/helidon/pull/7457)
+- JPA: Adds zero-argument non-private constructors to NonTransactionalEntityManager and ExtendedEntityManager [7560](https://github.com/helidon-io/helidon/pull/7560)
+- JPA: Fixes a jar-only URL resolution bug [7749](https://github.com/helidon-io/helidon/pull/7749)
+- JPA: Fixes an issue where autoCommit is not restored properly in certain edge cases; ensures related proper Hibernate JTA settings are set by default [7741](https://github.com/helidon-io/helidon/pull/7741)
+- Metrics: Change heap functions to get current memory usage [7404](https://github.com/helidon-io/helidon/pull/7404)
+- MicroProfile: Several Refactor commits to improve code readability [6679](https://github.com/helidon-io/helidon/pull/6679)
+- OCI: Adds OciSecretsConfigSourceProvider.java [7414](https://github.com/helidon-io/helidon/pull/7414)
+- OCI: Global Config Source [7386](https://github.com/helidon-io/helidon/pull/7386)
+- OCI: Introduces Lazy OCI Vault ConfigSource [7481](https://github.com/helidon-io/helidon/pull/7481)
+- OCI: Introduces OciSecretsMpMetaConfigProvider, which adapts OciSecretsConfigSourceProvider to the MpMetaConfigProvider contract [7555](https://github.com/helidon-io/helidon/pull/7555)
+- OCI: Makes SecretBundleConfigSource public; improves modification logic [7468](https://github.com/helidon-io/helidon/pull/7468)
+- OCI: backport of OciExtension Refinements [7576](https://github.com/helidon-io/helidon/pull/7576)
+- OpenAPI: Fix bug with empty Accept header [7535](https://github.com/helidon-io/helidon/pull/7535)
+- Security: Backport issue #7698 - tls manager caching [7755](https://github.com/helidon-io/helidon/pull/7755)
+- Security: Create constants for outbound id and secret [7486](https://github.com/helidon-io/helidon/pull/7486)
+- Security: Fix get in evictable cache, as it did not update last accessed timestamp [7464](https://github.com/helidon-io/helidon/pull/7464)
+- Security: Fix google-login behind proxy [7456](https://github.com/helidon-io/helidon/pull/7456)
+- Security: JWK signature now follows P1363 pair format [7185](https://github.com/helidon-io/helidon/pull/7185)
+- Security: Security context not overridden [7512](https://github.com/helidon-io/helidon/pull/7512)
+- Security: TargetKeys Map changed to ConcurrentHashMap [7602](https://github.com/helidon-io/helidon/pull/7602)
+- Security: TlsManager backport [7650](https://github.com/helidon-io/helidon/pull/7650)
+- Tracing: Decrease DEFAULT_SCHEDULE_DELAY time for JaegerTracerBuilder [7725](https://github.com/helidon-io/helidon/pull/7725)
+- Tracing: Migrate opentracing to Helidon Tracing [7709](https://github.com/helidon-io/helidon/pull/7709)
+- Tracing: Move Opentracing to Helidon Tracing API [7679](https://github.com/helidon-io/helidon/pull/7679)
+- Tracing: Simple to Batch Span exporter [7419](https://github.com/helidon-io/helidon/pull/7419)
+- Tracing: Update Tracing Context on return [7167](https://github.com/helidon-io/helidon/pull/7167)
+- WebClient: Add automatic support in WebClient for JVM http.proxyHost and related… [7322](https://github.com/helidon-io/helidon/pull/7322)
+- WebServer: Correctly handle IPv6 addresses for requested URI. [7469](https://github.com/helidon-io/helidon/pull/7469)
+- WebServer: Fix #7783: max-payload-size is parsed as an Integer [7895](https://github.com/helidon-io/helidon/pull/7895)
+- WebServer: Fix intermittent out-of-order chunk #7407 [7441](https://github.com/helidon-io/helidon/pull/7441)
+- WebServer: Replace deprecated socket(String) on namedSocket(String) from ServerConfiguration [7318](https://github.com/helidon-io/helidon/pull/7318)
+- WebSocket: Added support for WS endpoints in application scope [7245](https://github.com/helidon-io/helidon/pull/7245)
+- Build: Add ability to deploy snapshot builds [7315](https://github.com/helidon-io/helidon/pull/7315)
+- Build: Address maven 3.9.2 plugin issues. [7251](https://github.com/helidon-io/helidon/pull/7251)
+- Dependencies: Force upgrade snappy-java to 1.1.10.5 [7685](https://github.com/helidon-io/helidon/pull/7685)
+- Dependencies: Updates version of Micronaut libraries [7497](https://github.com/helidon-io/helidon/pull/7497)
+- Dependencies: Upgrade ByteBuddy and ASM for Java 21 [7490](https://github.com/helidon-io/helidon/pull/7490)
+- Dependencies: Upgrade Jersey to 3.0.11 [7175](https://github.com/helidon-io/helidon/pull/7175)
+- Dependencies: Upgrade Neo4j to v.5 [7635](https://github.com/helidon-io/helidon/pull/7635)
+- Dependencies: Upgrade Netty to 4.1.100.Final [7818](https://github.com/helidon-io/helidon/pull/7818)
+- Dependencies: Upgrade grpc-java to 1.57.1 and remove repackaging of io.grpc [7298](https://github.com/helidon-io/helidon/pull/7298)
+- Dependencies: Upgrade jboss logging to 3.5.3.Final [7596](https://github.com/helidon-io/helidon/pull/7596)
+- Dependencies: Upgrade jgit to 6.7.0 [7592](https://github.com/helidon-io/helidon/pull/7592)
+- Dependencies: Upgrade kafka-clients and okhttp [7836](https://github.com/helidon-io/helidon/pull/7836)
+- Dependencies: Upgrade log4j to 2.21.1 [7898](https://github.com/helidon-io/helidon/pull/7898)
+- Dependencies: Upgrade to oci sdk 3.21.0 [7254](https://github.com/helidon-io/helidon/pull/7254)
+- Dependencies: upgrade okio to 3.4.0 [7238](https://github.com/helidon-io/helidon/pull/7238)
+- Dependencies: upgrade oci-sdk to 3.26.0 [7878](https://github.com/helidon-io/helidon/pull/7878)
+- Docs: Add book reference to documentation and readme [7577](https://github.com/helidon-io/helidon/pull/7577)
+- Docs: Add white paper link to README.MD [7363](https://github.com/helidon-io/helidon/pull/7363)
+- Docs: Draft of the integration doc for 3.x [6864](https://github.com/helidon-io/helidon/pull/6864)
+- Docs: Fixes user-reported typo in persistence guide [7751](https://github.com/helidon-io/helidon/pull/7751)
+- Docs: Messaging doc update [7838](https://github.com/helidon-io/helidon/pull/7838)
+- Docs: README.md: add a books section [7743](https://github.com/helidon-io/helidon/pull/7743)
+- Docs: Reactive streams doc alignment #6458 [7724](https://github.com/helidon-io/helidon/pull/7724)
+- Docs: Remove description of Config.changes() API [7500](https://github.com/helidon-io/helidon/pull/7500)
+- Examples: Add OpenAPI annotations to examples/quickstarts/helidon-quickstart-mp (#1190) [6818](https://github.com/helidon-io/helidon/pull/6818)
+- Examples: Add app.yaml to quickstart [7216](https://github.com/helidon-io/helidon/pull/7216)
+- Examples: Archetype - Remove unused files [7239](https://github.com/helidon-io/helidon/pull/7239)
+- Examples: Archetype : generate module-info file [7252](https://github.com/helidon-io/helidon/pull/7252)
+- Examples: Refactor TODO app example to remove the of use NodeJS/NPM [7455](https://github.com/helidon-io/helidon/pull/7455)
+- Examples: Use JSON-B instead of JSON-P in MP quickstarts [7487](https://github.com/helidon-io/helidon/pull/7487)
+- Examples: archetypes does not offer a metrics provider choice for custom/se [7638](https://github.com/helidon-io/helidon/pull/7638)
+- Examples: remove license headers in archetype generated files [7235](https://github.com/helidon-io/helidon/pull/7235)
+- Tests: Fix parent for TestNG project [7616](https://github.com/helidon-io/helidon/pull/7616)
+- Tests: Enable tests that were disabled during renaming to jakarta packages work [7606](https://github.com/helidon-io/helidon/pull/7606)
+- Tests: Lets unit tests validating JpaExtension and unit tests validating PersistenceExtension run side-by-side; continuation of overall fix for nested transaction problems [7118](https://github.com/helidon-io/helidon/pull/7118)
+- Tests: Re-enabled test after integration with latest Jersey [7313](https://github.com/helidon-io/helidon/pull/7313)
+- Tests: Replace try/catch in tests on assertThrows [7344](https://github.com/helidon-io/helidon/pull/7344)
+- Tests: Resolves issue 7316, which features some intermittently failing H2 database tests [7317](https://github.com/helidon-io/helidon/pull/7317)
+- Tests: Use text blocks in tests [7354](https://github.com/helidon-io/helidon/pull/7354)
+
+
+## [3.2.2]
+
+This is a bugfix release of Helidon and is recommended for all users of Helidon 3.  Helidon 3 requires Java 17 or newer.
+
+### CHANGES
+
+- Config: Filter complex environment properties configuration [6994](https://github.com/helidon-io/helidon/pull/6994)
+- DB: Update serial config for ojdbc driver [7116](https://github.com/helidon-io/helidon/pull/7116)
+- JWT: Security propagation is now disabled with not configured [6806](https://github.com/helidon-io/helidon/pull/6806)
+- LRA: Fix LRA Logging [6733](https://github.com/helidon-io/helidon/pull/6733)
+- LRA: LRA coordinator docker fix [6725](https://github.com/helidon-io/helidon/pull/6725)
+- Messaging: 6847 WLS JMS connector doesn't support named factory bean  [6922](https://github.com/helidon-io/helidon/pull/6922)
+- Metrics: Improved performance of metric lookups in MetricProducer [6842](https://github.com/helidon-io/helidon/pull/6842)
+- Metrics: Remove metrics app registry clear-out code from metrics extension; add doc [6956](https://github.com/helidon-io/helidon/pull/6956)
+- MicroProfile: Support for injection of ServerRequest and ServerResponse also via CDI [6798](https://github.com/helidon-io/helidon/pull/6798)
+- MultiPart: Avoid calling MimeParser.offer with empty buffers [6898](https://github.com/helidon-io/helidon/pull/6898)
+- MultiPart: MultiPart Builder improvements  [6900](https://github.com/helidon-io/helidon/pull/6900)
+- Tracing: Add support for multiple baggage items [7022](https://github.com/helidon-io/helidon/pull/7022)
+- Tracing: Fix OpenTracingSpan Baggage propagation issue [6987](https://github.com/helidon-io/helidon/pull/6987)
+- Tracing: Make Jaeger Tracer OpenTelemetry Agent aware. [6537](https://github.com/helidon-io/helidon/pull/6537)
+- Tracing: Make Zipkin baggage aware [7004](https://github.com/helidon-io/helidon/pull/7004)
+- Tracing: Move tracer tags to process [7027](https://github.com/helidon-io/helidon/pull/7027)
+- WebServer: Avoid reflecting back user data coming from exception messages [6988](https://github.com/helidon-io/helidon/pull/6988)
+- WebServer: Fix websocket close event propagation on unclean disconnect [7013](https://github.com/helidon-io/helidon/pull/7013)
+- WebServer: Make ByteBufferDataChunk.isReleased and ByteBufDataChunk.isReleased thread-safe [6899](https://github.com/helidon-io/helidon/pull/6899)
+- WebServer: Release Netty ByteBuf after it is consumed by Tyrus [7042](https://github.com/helidon-io/helidon/pull/7042)
+- WebServer: Reset channel auto-read config before upgrading websocket connection [7050](https://github.com/helidon-io/helidon/pull/7050)
+- Build: Update validate workflow to use Oracle jdk [6934](https://github.com/helidon-io/helidon/pull/6934)
+- Build: release workflow [7098](https://github.com/helidon-io/helidon/pull/7098) [7104](https://github.com/helidon-io/helidon/pull/7104)
+- Dependencies: Integrate build tools 3.0.5 [6903](https://github.com/helidon-io/helidon/pull/6903)
+- Dependencies: Upgrade Jackson to 2.15.2 [7124](https://github.com/helidon-io/helidon/pull/7124)
+- Dependencies: Upgrade graphql to 18.6 [6974](https://github.com/helidon-io/helidon/pull/6974)
+- Dependencies: Upgrade grpc, guava, netty, snappy-java, use slim neo4j driver [7057](https://github.com/helidon-io/helidon/pull/7057)
+- Dependencies: Upgrade maven-dependency-plugin to 3.6.0 [6912](https://github.com/helidon-io/helidon/pull/6912)
+- Dependencies: upgrade Weld [6794](https://github.com/helidon-io/helidon/pull/6794)
+- Docs: Documentation enhancements for WebClient [6736](https://github.com/helidon-io/helidon/pull/6736)
+- Docs: Draft of the integration doc for 3.x [6864](https://github.com/helidon-io/helidon/pull/6864)
+- Docs: Fix table formatting [6821](https://github.com/helidon-io/helidon/pull/6821)
+- Examples: Fix params of @ExampleObject annotations in examples (#6040) [6782](https://github.com/helidon-io/helidon/pull/6782)
+- Test: 6524 Intermittent watermark test fix [6835](https://github.com/helidon-io/helidon/pull/6835)
+- Test: Add @target(ElementType.METHOD) for annotation @mptest [6490](https://github.com/helidon-io/helidon/pull/6490)
+- Test: CipherSuiteTest intermittent failure [6949](https://github.com/helidon-io/helidon/pull/6949)
+
+## [3.2.1]
+
+This is a bugfix release of Helidon and is recommended for all users of Helidon 3.  Helidon 3 requires Java 17 or newer.
+
+This release upgrades Kafka Clients from 2.8.1 to 3.4.0. If you encounter issues running against older Kafka servers or the OCI Streaming Service you might need to use the work-around docomented in [6718](https://github.com/helidon-io/helidon/issues/6718)
+
+### CHANGES
+
+- FT: Switch metrics API jar scope to compile from provided [6666](https://github.com/helidon-io/helidon/pull/6666)
+- JPA: Adds an enabled flag to JpaExtension to permit subsequent refactoring and replacement [6512](https://github.com/helidon-io/helidon/pull/6512)
+- JPA: Adds more classes as part of overall JPA refactoring effort [6584](https://github.com/helidon-io/helidon/pull/6584)
+- JPA: Improving JPA pom.xml as part of overall JPA refactoring [6508](https://github.com/helidon-io/helidon/pull/6508)
+- MicroProfile: RestClient and FT intergration changes [6665](https://github.com/helidon-io/helidon/pull/6665)
+- Native image: native-image configuration for Jackson in Helidon MP. [6607](https://github.com/helidon-io/helidon/pull/6607)
+- Security: Unauthenticated status code fix  [6482](https://github.com/helidon-io/helidon/pull/6482)
+- Tracing: Add baggage to Helidon Span [6692](https://github.com/helidon-io/helidon/pull/6692)
+- Tracing: Support for different propagators for Jaeger OpenTelemetry [6611](https://github.com/helidon-io/helidon/pull/6611)
+- WebClient: Add option to disable DNS Resolver for WebClient [6492](https://github.com/helidon-io/helidon/pull/6492)
+- WebClient: Proxy now properly selects proxy settings from system properties [6526](https://github.com/helidon-io/helidon/pull/6526)
+- WebServer: Fixed problem in AUTO_FLUSH backpressure strategy  [6556](https://github.com/helidon-io/helidon/pull/6556)
+- WebServer: Response should not be chunked if there is no entity [6637](https://github.com/helidon-io/helidon/pull/6637)
+- WebServer: Use checkNested(Throwable) for req.next(Throwable) [6699](https://github.com/helidon-io/helidon/pull/6699)
+- Build: Use GitHub Action for helidon-3.x branch [6500](https://github.com/helidon-io/helidon/pull/6500)
+- Builds: update helidon-version-is-release in doc files when updating release to fix links [6689](https://github.com/helidon-io/helidon/pull/6689)
+- Dependencies: Kafka bump up 2.8.1 > 3.4.0 [6706](https://github.com/helidon-io/helidon/pull/6706)
+- Dependencies: Update grpc-java version to 1.54.1 and clean up grpc tests [6685](https://github.com/helidon-io/helidon/pull/6685)
+- Dependencies: Upgrade graphql to 17.5 [6533](https://github.com/helidon-io/helidon/pull/6533)
+- Dependencies: Upgrade hibernate to 6.1.7.Final and eclipselink asm to 9.4.0 [6514](https://github.com/helidon-io/helidon/pull/6514)
+- Dependencies: upgrade netty to 4.1.90.Final [6511](https://github.com/helidon-io/helidon/pull/6511)
+- Docs: Fix Openapi links issue 6605 [6678](https://github.com/helidon-io/helidon/pull/6678)
+- Docs: Update documentation of composite provider flag. (#6597) [6635](https://github.com/helidon-io/helidon/pull/6635)
+- Docs: Updated doc to reflect current support for FT thread pool properties [6621](https://github.com/helidon-io/helidon/pull/6621)
+- Examples: Add await timeout and replace thenAccept to forSingle  [6558](https://github.com/helidon-io/helidon/pull/6558)
+- Examples: Create file validations [6609](https://github.com/helidon-io/helidon/pull/6609)
+- Examples: Fix Helidon Archetype generates broken projects  [6721](https://github.com/helidon-io/helidon/pull/6721)
+- Examples: archetypes generating poorly formatted code [6623](https://github.com/helidon-io/helidon/pull/6623)
+- Examples: Update streaming example to use IoMulti [6604](https://github.com/helidon-io/helidon/pull/6604)
+- Test: Use Hamcrest assertions instead of JUnit [6449](https://github.com/helidon-io/helidon/pull/6449) [6638](https://github.com/helidon-io/helidon/pull/6638)
+
+## [3.2.0]
+
+This is a bugfix release of Helidon and is recommended for all users of Helidon 3.  Helidon 3 requires Java 17 or newer.
+
+This release upgrades SnakeYaml from 1.32 to 2.0. Because of incompatible API changes in SnakeYaml 2 it is possible your application might be impacted if you use SnakeYaml directly. While we reccomend you do the upgrade, if that is not possible you may force downgrade SnakeYaml to 1.32 and Helidon 3.2.0 will still work.
+
+### CHANGES
+
+- Config: Escape the key when copying a config node [6304](https://github.com/helidon-io/helidon/pull/6304)
+- JMS: JNDI destination support [6301](https://github.com/helidon-io/helidon/pull/6301)
+- JPA: Minor JPA cleanups [6435](https://github.com/helidon-io/helidon/pull/6435)
+- JTA: Fixes erroneous closing behavior in JtaConnection.java [6321](https://github.com/helidon-io/helidon/pull/6321)
+- Logging: Remove FileHandler from logging.properties [6363](https://github.com/helidon-io/helidon/pull/6363)
+- Metrics: Change default exemplar behavior to conform to OpenMetrics spec; allow users to choose former non-standard behavior [6387](https://github.com/helidon-io/helidon/pull/6387)
+- MultiPart: Fix MultiPartDecoder lazy inner publisher subscription [6225](https://github.com/helidon-io/helidon/pull/6225)
+- MultiPart: WritableMultiPart create methods fixed [6390](https://github.com/helidon-io/helidon/pull/6390)
+- Native image: Dockerfile.native fixes. [6424](https://github.com/helidon-io/helidon/pull/6424)
+- Native image: Fix native-image build-time initialization [6426](https://github.com/helidon-io/helidon/pull/6426) [6438](https://github.com/helidon-io/helidon/pull/6438)
+- Security: OIDC original uri resolving leaving out query params [6342](https://github.com/helidon-io/helidon/pull/6342)
+- WebServer: Support for non-GET HTTP/2 upgrades [6383](https://github.com/helidon-io/helidon/pull/6383)
+- Build: Use https in pom.xml schemaLocation [6313](https://github.com/helidon-io/helidon/pull/6313) and others
+- Dependencies: Adapt to SnakeYAML 2.0 changes [5793](https://github.com/helidon-io/helidon/pull/5793)
+- Dependencies: Upgrade OCI SDK to 3.8.0 [6427](https://github.com/helidon-io/helidon/pull/6427)
+- Docs: Fix `{h1-prefix}` unreplaced token in SE metrics guide preamble [6409](https://github.com/helidon-io/helidon/pull/6409)
+- Docs: Remove claim that metrics are automatically propagated from the webserver to the webclient [6319](https://github.com/helidon-io/helidon/pull/6319)
+- Docs: TOC - #5828 [6270](https://github.com/helidon-io/helidon/pull/6270)
+- Docs: Toc tasks from #5828 [6146](https://github.com/helidon-io/helidon/pull/6146)
+- Docs: Typo in metrics guide 3.x [6271](https://github.com/helidon-io/helidon/pull/6271)
+- Docs: [3.x] Describe disabling config token replacement [6166](https://github.com/helidon-io/helidon/pull/6166)
+- Examples: Update mustache format in archetype files [6287](https://github.com/helidon-io/helidon/pull/6287)
+- Tests: Fix RC in JMS error test [6376](https://github.com/helidon-io/helidon/pull/6376)
+- Tests: Fix intermittent issue on OciMetricsSupportTest [6177](https://github.com/helidon-io/helidon/pull/6177)
+- Tests: JMS intermittent test fix [6393](https://github.com/helidon-io/helidon/pull/6393)
+- Tests: Use Hamcrest assertions instead of JUnit [6292](https://github.com/helidon-io/helidon/pull/6292) and others
+
+## [3.1.2]
+
+This is a bugfix release of Helidon and is recommended for all users of Helidon 3.  Helidon 3 requires Java 17 or newer.
+
+### CHANGES
+
+- Config: Configuration fixes [6150](https://github.com/helidon-io/helidon/pull/6150)
+- OpenAPI: Fix OpenAPI UI options processing [6110](https://github.com/helidon-io/helidon/pull/6110)
+- Security: OIDC logout functionality fixed [6118](https://github.com/helidon-io/helidon/pull/6118)
+- Security: OIDC tenant SPI default priority changed [6127](https://github.com/helidon-io/helidon/pull/6127)
+- Tracing: Fix parent handling in OpenTelemetry (#6092) [6128](https://github.com/helidon-io/helidon/pull/6128)
+- WebServer: BodyPart deprecate name() and filename() ; add isNamed [6097](https://github.com/helidon-io/helidon/pull/6097)
+- Dependencies: Update build-tools to 3.0.4 [6139](https://github.com/helidon-io/helidon/pull/6139)
+- Docs: changes for tracing and tracing guide [6113](https://github.com/helidon-io/helidon/pull/6113)
+
+## [3.1.1]
+
+This is a bugfix release of Helidon and is recommended for all users of Helidon 3.  Helidon 3 requires Java 17 or newer.
+
+### CHANGES
+
+- Config: Add built-in support for converting config strings to enum values [5732](https://github.com/helidon-io/helidon/pull/5732)
+- JPA: Adds connection unwrapping abilities to CDISEPlatform.java [5790](https://github.com/helidon-io/helidon/pull/5790)
+- JTA: Introduces JtaConnection.java [5905](https://github.com/helidon-io/helidon/pull/5905)
+- JTA: Introduces LocalXAResource and a few support classes in jta/jdbc [5733](https://github.com/helidon-io/helidon/pull/5733)
+- Messaging: 6035 AQ connector @ConnectorAttribute [6036](https://github.com/helidon-io/helidon/pull/6036)
+- Messaging: WLS JMS Object-Based Security [5854](https://github.com/helidon-io/helidon/pull/5854)
+- Metrics: Fix improper handling of metrics global tags [5812](https://github.com/helidon-io/helidon/pull/5812)
+- MicroProfile: Fix order of initialization of tracing and security. [5987](https://github.com/helidon-io/helidon/pull/5987)
+- OCI: Add Helidon Metrics integration with OCI [5829](https://github.com/helidon-io/helidon/pull/5829)
+- OCI: Add OCI MP Archetype [5939](https://github.com/helidon-io/helidon/pull/5939)
+- OCI: Register OciMetricsSupport service only when enable flag is set to true [6032](https://github.com/helidon-io/helidon/pull/6032)
+- Security: Accidentally removed updateRequest method returned [5844](https://github.com/helidon-io/helidon/pull/5844)
+- Security: Default tenant is not included for propagation [5898](https://github.com/helidon-io/helidon/pull/5898)
+- Security: Oidc tenant name now properly escaped [5872](https://github.com/helidon-io/helidon/pull/5872)
+- Security: Support for customization of 'logout uri' in OIDC provider [5784](https://github.com/helidon-io/helidon/pull/5784)
+- WebServer: 100 continue triggered by content request [5714](https://github.com/helidon-io/helidon/pull/5714)
+- WebServer: Add allow-list handling to requested URI behavior [5668](https://github.com/helidon-io/helidon/pull/5668)
+- WebServer: Suppress incorrect start-up log message related to requested URI discovery [5862](https://github.com/helidon-io/helidon/pull/5862)
+- WebServer: Switch default back-pressure strategy to AUTO_FLUSH from LINEAR #5943 [5944](https://github.com/helidon-io/helidon/pull/5944)
+- WebSocket: Enhancement to allow different WebSocket applications to be registered on different ports. [5822](https://github.com/helidon-io/helidon/pull/5822)
+- Build: Cleanup Helidon BOM by removing obsolete and internal artifacts [6017](https://github.com/helidon-io/helidon/pull/6017)
+- Dependencies: Bump testng from 7.5 to 7.7.0 [5918](https://github.com/helidon-io/helidon/pull/5918)
+- Dependencies: Neo4j Driver update [5752](https://github.com/helidon-io/helidon/pull/5752)
+- Dependencies: Upgrade jersey to 3.0.9 [5787](https://github.com/helidon-io/helidon/pull/5787)
+- Dependencies: Upgrade OCI SDK to 3.2.1 [5954](https://github.com/helidon-io/helidon/pull/5954)
+- Docs: DOC add Histogram to SE Metrics [6059](https://github.com/helidon-io/helidon/pull/6059)
+- Docs: Doc fixes for Issue 4673 [5614](https://github.com/helidon-io/helidon/pull/5614)
+- Docs: Documentation updates to correct wrong instructions for HOCON config parsing [5972](https://github.com/helidon-io/helidon/pull/5972)
+- Docs: Fix for #5771 - updates to SE WebServer toc [5772](https://github.com/helidon-io/helidon/pull/5772)
+- Docs: Fix incorrectly reverted icons [5761](https://github.com/helidon-io/helidon/pull/5761)
+- Docs: New subsection describing enhancement to support WebSocket application bindings on different ports [5835](https://github.com/helidon-io/helidon/pull/5835)
+- Docs: TOC updates to include additional levels  [6003](https://github.com/helidon-io/helidon/pull/6003)
+- Docs: Updated sitegen.yaml for #5076 [5952](https://github.com/helidon-io/helidon/pull/5952)
+- Docs: Updates to MP TOCs [5923](https://github.com/helidon-io/helidon/pull/5923)
+- Docs: WLS connector doc typo [5803](https://github.com/helidon-io/helidon/pull/5803)
+- Docs: fix tracing docs with incorrect webclient artifact ids [6029](https://github.com/helidon-io/helidon/pull/6029)
+- Examples: Archetype generates wrong Jaeger configuration (SE) [5920](https://github.com/helidon-io/helidon/pull/5920)
+- Examples: Fix parent poms in example [5736](https://github.com/helidon-io/helidon/pull/5736)
+- Test: Follow-up to PR #5822 [5845](https://github.com/helidon-io/helidon/pull/5845)
+- Test: Use Hamcrest assertions instead of JUnit [5962](https://github.com/helidon-io/helidon/pull/5962) and Others
+
+
+## [3.1.0]
+
+This is a minor release of Helidon and is recommended for all users of Helidon 3. In addition to bug fixes and minor enhancements, this release contains two dependency upgrades that could have a small impact on compatibility. These are:
+
+* [OCI SDK 3.0](https://docs.oracle.com/en-us/iaas/Content/API/SDKDocs/javasdk3.htm). Note that if you are using Helidon MP OCI SDK integration then you will not need to specify an HTTP Client Library as the Helidon support will do that for you.
+* [GraalVM Native Image 22.3.0](https://www.graalvm.org/release-notes/22_3/).
+
+### CHANGES
+
+- Common: Add info to CharBuf exceptions [5375](https://github.com/helidon-io/helidon/pull/5375)
+- Common: Fix inconsistent status name [5642](https://github.com/helidon-io/helidon/pull/5642)
+- Common: WebServer.Builder media support methods with Supplier variants [5632](https://github.com/helidon-io/helidon/pull/5632)
+- Config: Provide MP config profile support for application.yaml (#5565) [5585](https://github.com/helidon-io/helidon/pull/5585)
+- DBClient: Handle exception on inTransaction apply [5699](https://github.com/helidon-io/helidon/pull/5699)
+- Docker: remove -Ddocker.build=true [5484](https://github.com/helidon-io/helidon/pull/5484)
+- Fault Tolerance: Additional @Retry strategies [5165](https://github.com/helidon-io/helidon/pull/5165)
+- Grpc: Grpc component Does not handle package directive in proto files. [5283](https://github.com/helidon-io/helidon/pull/5283)
+- JPA: Improves integrations/jdbc/jdbc to better support future JPA improvements [5654](https://github.com/helidon-io/helidon/pull/5654)
+- LRA: LRA false warning  [5555](https://github.com/helidon-io/helidon/pull/5555)
+- Messaging: JMS connector update [5327](https://github.com/helidon-io/helidon/pull/5327)
+- Messaging: Kafka producer nacking fix 5510 [5524](https://github.com/helidon-io/helidon/pull/5524)
+- Messaging: Message body operator matching with parameters [5574](https://github.com/helidon-io/helidon/pull/5574)
+- Metrics: Fix incorrect tags comparison when trying to match metric IDs [5544](https://github.com/helidon-io/helidon/pull/5544)
+- MicroProfile: Add null check to MP Server.Builder.config() (#5363) [5372](https://github.com/helidon-io/helidon/pull/5372)
+- Native Image: Adding feature file for MP native image. [5652](https://github.com/helidon-io/helidon/pull/5652)
+- OCI: Replace OCI Java SDK shaded jar with v3 for OCI integration [5704](https://github.com/helidon-io/helidon/pull/5704)
+- OpenAPI: Add OpenAPI U/I integration [3.x] [5568](https://github.com/helidon-io/helidon/pull/5568)
+- OpenAPI: Fix error in OpenAPI handling of `default` values' types [5289](https://github.com/helidon-io/helidon/pull/5289)
+- Reactive: Multi.forEachCS [5527](https://github.com/helidon-io/helidon/pull/5527)
+- Security: Jwt now support multiple issuers and multi issuer validation [5648](https://github.com/helidon-io/helidon/pull/5648)
+- Security: Jwt scope handling extended over array support [5521](https://github.com/helidon-io/helidon/pull/5521)
+- Security: OIDC multi-tenant and lazy loading implementation [5619](https://github.com/helidon-io/helidon/pull/5619)
+- Security: Use only public APIs to read PKCS#1 keys (#5240) [5258](https://github.com/helidon-io/helidon/pull/5258)
+- Tracing: Client tracing interceptor no longer clears exception [5601](https://github.com/helidon-io/helidon/pull/5601)
+- WebClient: Add relativeUris flag in OidcConfig to allow Oidc webclient to use relative path on the request URI [5335](https://github.com/helidon-io/helidon/pull/5335)
+- WebServer: Broad changes to handle case properly in headers and parameters [5221](https://github.com/helidon-io/helidon/pull/5221)
+- WebServer: Log an entry in warning level for a 400 or 413 response [5295](https://github.com/helidon-io/helidon/pull/5295)
+- WebServer: Log simple message for a 400 or a 413 and more under FINE [5355](https://github.com/helidon-io/helidon/pull/5355)
+- WebServer: NullPointerException when there is an illegal character in the request [5471](https://github.com/helidon-io/helidon/pull/5471)
+- Webserver: Support for requested URI for web server requests. [5330](https://github.com/helidon-io/helidon/pull/5330)
+- Dependencies: Bump-up reactive messaging/ops to 3.0 [5525](https://github.com/helidon-io/helidon/pull/5525)
+- Dependencies: Fix Guava version to match that required by the grpc-java libraries [5503](https://github.com/helidon-io/helidon/pull/5503)
+- Dependencies: Upgrade GraalVM native image to 22.3.0 [5308](https://github.com/helidon-io/helidon/pull/5308)
+- Dependencies: Upgrade Netty to 4.1.86.Final [5703](https://github.com/helidon-io/helidon/pull/5703)
+- Dependencies: Upgrade PostgreSQL JDBC driver dependency to 42.4.3 [5560](https://github.com/helidon-io/helidon/pull/5560)
+- Dependencies: Upgrade Helidon build-tools to 3.0.3 [5726](https://github.com/helidon-io/helidon/pull/5726)
+- Dependencies: Upgrade grpc-java to 1.49.2 [5348](https://github.com/helidon-io/helidon/pull/5348)
+- Dependencies: Upgrade to jackson-databind-2.13.4.2 via bom 2.13.4.20221013 [5302](https://github.com/helidon-io/helidon/pull/5302)
+- Docs: Declare `h1-prefix` as early as possible so it is used for the title prefix [5667](https://github.com/helidon-io/helidon/pull/5667)
+- Docs: Document config.require-encryption [5188](https://github.com/helidon-io/helidon/pull/5188)
+- Docs: Fix inadvertent changes in attributes.adoc [5334](https://github.com/helidon-io/helidon/pull/5334)
+- Docs: JAXRS doc updates for 3611 [5225](https://github.com/helidon-io/helidon/pull/5225)
+- Docs: Openapi generator doc 3.x [5263](https://github.com/helidon-io/helidon/pull/5263)
+- Docs: flatMapCompletionStage javadoc fix [5622](https://github.com/helidon-io/helidon/pull/5622)
+- Examples: Make JSON-B a default option for Helidon MP projects (backport) [5208](https://github.com/helidon-io/helidon/pull/5208)
+- Examples: OpenAPI generator examples [5649](https://github.com/helidon-io/helidon/pull/5649)
+- Examples: Remove license report from maven lifecycle [5244](https://github.com/helidon-io/helidon/pull/5244)
+- Examples: Use property to skip execution of eclipselink weave [5313](https://github.com/helidon-io/helidon/pull/5313)
+- Examples: database choices should be before packaging (backport) [5294](https://github.com/helidon-io/helidon/pull/5294)
+- Tests: Use Hamcrest assertions instead of JUnit (#1749) [5189](https://github.com/helidon-io/helidon/pull/5189) and others
+- Tests: Fix Intermittent TestJBatchEndpoint.runJob [5557](https://github.com/helidon-io/helidon/pull/5557)
+- Tests: Fix intermittent jBatch test [5247](https://github.com/helidon-io/helidon/pull/5247)
+- Tests: Simplify named socket WebTarget injection in Tests [5269](https://github.com/helidon-io/helidon/pull/5269)
+- Tests: Use Hamcrest assertions instead of JUnit in tests/functional/jax-rs-multiple-apps (#1749) [5634](https://github.com/helidon-io/helidon/pull/5634)
+- Tests: Various metrics test improvements to avoid intermittent failures [5621](https://github.com/helidon-io/helidon/pull/5621)
+
+## [3.0.2]
 
 This is a bugfix release of Helidon and is recommended for all users of Helidon 3.
 
 ### CHANGES
+
+- CORS: Fix CORS annotation handling error in certain cases [5104](https://github.com/helidon-io/helidon/pull/5104)
+- Config: @ConfigProperties without bean defining annotation - 3x [4853](https://github.com/helidon-io/helidon/pull/4853)
+- DBClient: Issue #4719 - Helidon DBClient does not trigger an Exception when no sane DB connection can be obtained [4771](https://github.com/helidon-io/helidon/pull/4771)
+- Health: Use lazy values to initialized HealthSupport FT handlers [5146](https://github.com/helidon-io/helidon/pull/5146)
+- JAX-RS: Make Application subclasses available via our context during Feature executions (3.x) [4786](https://github.com/helidon-io/helidon/pull/4786)
+- Jersey: Register a low-priority exception mapper to log internal errors  [5073](https://github.com/helidon-io/helidon/pull/5073)
+- Messaging: AQ Connector - JEP 290 [4672](https://github.com/helidon-io/helidon/pull/4672)
+- Metrics: Fix OpenMetrics formatting error (3.x) [4900](https://github.com/helidon-io/helidon/pull/4900)
+- MicroProfile: Fix identification of parallel startup of CDI [4993](https://github.com/helidon-io/helidon/pull/4993)
+- MicroProfile: MP path based static content should use index.html (3.x) [4736](https://github.com/helidon-io/helidon/pull/4736)
+- Native-image: add serial config required for oracle driver (3.x) [4960](https://github.com/helidon-io/helidon/pull/4960)
+- Reactive: MultiFromBlockingInputStream RC fix 3x [3597](https://github.com/helidon-io/helidon/pull/3597)
+- RestClient proxy test exclusion removed [4769](https://github.com/helidon-io/helidon/pull/4769)
+- Security: Access token refresh - 3.x [4821](https://github.com/helidon-io/helidon/pull/4821)
+- Security: JWT-Auth implementation encrypted token recognition fixed [4811](https://github.com/helidon-io/helidon/pull/4811)
+- WebClient: DNS resolver should not be possible to set per request [4814](https://github.com/helidon-io/helidon/pull/4814)
+- WebClient: Dns resolver type method on webclient builder [4838](https://github.com/helidon-io/helidon/pull/4838)
+- WebClient: Round Robin added as DNS resolver option [4798](https://github.com/helidon-io/helidon/pull/4798)
+- WebServer: Default header size increased to 16K - Helidon 3.x [5016](https://github.com/helidon-io/helidon/pull/5016)
+- WebServer: Watermarked response backpressure 3x [4724](https://github.com/helidon-io/helidon/pull/4724)
+- Dependencies: Update graphql-java to 17.4 [4966](https://github.com/helidon-io/helidon/pull/4966)
+- Dependencies: Upgrade Hibernate to 6.1.4.Final, EclipseLink to 3.0.3 [5100](https://github.com/helidon-io/helidon/pull/5100)
+- Dependencies: Upgrade Postgre driver [4742](https://github.com/helidon-io/helidon/pull/4742)
+- Dependencies: Upgrade protobuf-java [5133](https://github.com/helidon-io/helidon/pull/5133)
+- Dependencies: Upgrade reactive-streams to 1.0.4 [5045](https://github.com/helidon-io/helidon/pull/5045)
+- Dependencies: Upgrade snakeyaml to 1.32 [4922](https://github.com/helidon-io/helidon/pull/4922)
+- Dependencies: Upgrades OCI to 2.45.0 on helidon-3.x [4827](https://github.com/helidon-io/helidon/pull/4827)
+- Docs: Fix for issue 4793 in tracing doc [4795](https://github.com/helidon-io/helidon/pull/4795)
+- Docs: editorial updates to DB Client guide [4499](https://github.com/helidon-io/helidon/pull/4499)
+- Docs: 4184 logging for an MP app  [4903](https://github.com/helidon-io/helidon/pull/4903)
+- Docs: Documentation minor fix [4902](https://github.com/helidon-io/helidon/pull/4902)
+- Docs: Fix broken links for Oracle Universal Connection Pool (#4781) [4862](https://github.com/helidon-io/helidon/pull/4862)
+- Docs: Fix broken links for ServerThreadPoolSupplier and ScheduledThreadPoolSupplier in mp/fault-tolerance.adoc (#4899) [4909](https://github.com/helidon-io/helidon/pull/4909)
+- Docs: Fix invalid example in se/config/advanced-configuration.adoc (#4775) [4920](https://github.com/helidon-io/helidon/pull/4920)
+- Docs: Fix misplaced attribute settings [4954](https://github.com/helidon-io/helidon/pull/4954)
+- Docs: Fix the structure of the table in the section "Traced spans" (#4792) [4859](https://github.com/helidon-io/helidon/pull/4859)
+- Docs: Replace deprecated ServerConfiguration.builder() on WebServer.builder() in docs - backport 3.x (#5025) [5117](https://github.com/helidon-io/helidon/pull/5117)
+- Docs: Update a few icons in the docs [4937](https://github.com/helidon-io/helidon/pull/4937)
+- Docs: Updated supported version of MicroProfile to 5.0 [4917](https://github.com/helidon-io/helidon/pull/4917)
+- Docs: update old K8s deployment yaml [4760](https://github.com/helidon-io/helidon/pull/4760)
+- Docs: updates for PR 4520 language review [4731](https://github.com/helidon-io/helidon/pull/4731)
+- Examples: 4857 arch fix minor issues  (backport) [4874](https://github.com/helidon-io/helidon/pull/4874)
+- Examples: Formatting of generated Helidon SE quickstart (backport) [4969](https://github.com/helidon-io/helidon/pull/4969)
+- Examples: Quickstart MP with Jackson fix JSON message [4905](https://github.com/helidon-io/helidon/pull/4905)
+- Examples: Remove module-info files from examples (3.x) [4894](https://github.com/helidon-io/helidon/pull/4894)
+- Examples: Tracing config updates in archetype [5137](https://github.com/helidon-io/helidon/pull/5137)
+- Examples: WebClient dependency in generated Helidon SE Quickstart should be in test scope (backport) [5020](https://github.com/helidon-io/helidon/pull/5020)
+- Examples: change beans.xml [4845](https://github.com/helidon-io/helidon/pull/4845)
+- Examples: k8s and v8o support in archetype (3.x) [4887](https://github.com/helidon-io/helidon/pull/4887)
+- Examples: Do not generate CDS archive when using Dockerfile.jlink [5158](https://github.com/helidon-io/helidon/pull/5158)
+- Test: 4980 EchoServiceTest timeout [5005](https://github.com/helidon-io/helidon/pull/5005)
+- Test: 5068 mock connector beans xml 3x [5069](https://github.com/helidon-io/helidon/pull/5069)
+- Test: Add robustness to some of the timing-susceptible metrics tests; add util matcher with retry [5047](https://github.com/helidon-io/helidon/pull/5047)
+- Test: Add some retries because post-request metrics updates occur after the response is sent [5136](https://github.com/helidon-io/helidon/pull/5136)
+- Test: Do not use retry to fix the test; stats are approximate; just check for existence, not values [5112](https://github.com/helidon-io/helidon/pull/5112)
+- Test: Fix FT intermittent failure - archetype build (backport) [4934](https://github.com/helidon-io/helidon/pull/4934)
+- Test: Fix for failing GraphQL tests on Windows [4732](https://github.com/helidon-io/helidon/pull/4732)
+- Test: HelidonTest doesn't start container properly with TestInstance.Lifecycle.PER_CLASS #4663 [4865](https://github.com/helidon-io/helidon/pull/4865)
+- Test: Intermittent test fix, using random port for tests. [4800](https://github.com/helidon-io/helidon/pull/4800)
+- Test: Issue 4740 - JPA integration tests should run on every build [5027](https://github.com/helidon-io/helidon/pull/5027)
+- Test: Special Windows build Config TCK profile no longer needed [4816](https://github.com/helidon-io/helidon/pull/4816)
+- Test: Use Hamcrest assertions instead of JUnit in tests [5057](https://github.com/helidon-io/helidon/pull/5057) (and others)
+
+## [3.0.1]
+
+This is a bugfix release of Helidon and is recommended for all users of Helidon 3. 
+
+### CHANGES
+
+- Common: Change log level to fine for exception caught while intercepting [4640](https://github.com/oracle/helidon/pull/4640)
+- Config: Map injection behavior restored [4653](https://github.com/oracle/helidon/pull/4653)
+- Config: Obtaining parent dir for watcher service fixed [4665](https://github.com/oracle/helidon/pull/4665)
+- Config: Unescape the keys when config is returned as a map [4715](https://github.com/oracle/helidon/pull/4715)
+- Deps: Upgrade protobuf to support osx-aarch_64 architecture [4662](https://github.com/oracle/helidon/pull/4662)
+- FT: Changes to FT implementation to support interception of proxy methods [4650](https://github.com/oracle/helidon/pull/4650)
+- Messaging: JMS Shim wraps null message fix [4671](https://github.com/oracle/helidon/pull/4671)
+- Metrics: Config metadata should be optional and provided [4728](https://github.com/oracle/helidon/pull/4728)
+- OCI: Undo manual shaded jar tasks [4619](https://github.com/oracle/helidon/pull/4619)
+- Security: Configuration parameter 'cookie-encryption-password' takes only a single character rather than a string [4675](https://github.com/oracle/helidon/pull/4675)
+- Test: Coordinator test fix [4610](https://github.com/oracle/helidon/pull/4610)
+- Test: Fix location of JDK to use a link and not installation [4661](https://github.com/oracle/helidon/pull/4661)
+- Test: Fixed orphaned modules. [4658](https://github.com/oracle/helidon/pull/4658)
+- WebServer: WebServerTls parts should not be initialized when disabled [4652](https://github.com/oracle/helidon/pull/4652)
+- WebSocket: Updated WebSocketHandler to correctly propagate query params from weberver to Tyrus [4647](https://github.com/oracle/helidon/pull/4647)
+- Build: Fix all copyright warnings. [4660](https://github.com/oracle/helidon/pull/4660)
+- Build: Fix release.sh to update version in attributes.adoc  [4689](https://github.com/oracle/helidon/pull/4689)
+- Docs: various documentation updates [4727](https://github.com/oracle/helidon/pull/4727) [4627](https://github.com/oracle/helidon/pull/4627) [4707](https://github.com/oracle/helidon/pull/4707) [4713](https://github.com/oracle/helidon/pull/4713) [4714](https://github.com/oracle/helidon/pull/4714) [4623](https://github.com/oracle/helidon/pull/4623) [4726](https://github.com/oracle/helidon/pull/4726) [4689](https://github.com/oracle/helidon/pull/4689) [4687](https://github.com/oracle/helidon/pull/4687) [4692](https://github.com/oracle/helidon/pull/4692) [4676](https://github.com/oracle/helidon/pull/4676) [4637](https://github.com/oracle/helidon/pull/4637) [4723](https://github.com/oracle/helidon/pull/4723) [4730](https://github.com/oracle/helidon/pull/4730)
+- Examples: Add examples for SE and MP to update counters of HTTP response status ranges (1xx, 2xx, etc.) [4617](https://github.com/oracle/helidon/pull/4617)
+- Examples: Fix JDK base image in Dockerfiles [4634](https://github.com/oracle/helidon/pull/4634)
+- Examples: Remove redundant __pkg__ folder in a project generated by helidon CLI [4642](https://github.com/oracle/helidon/pull/4642)
 
 ## [3.0.0]
 
@@ -399,9 +832,18 @@ Notable changes:
 - Examples: Update bare-mp archetype to use microprofile-core [3795](https://github.com/oracle/helidon/pull/3795)
 
 
-[3.0.1-SNAPSHOT]: https://github.com/oracle/helidon/compare/3.0.0...3.0.1
-[3.0.0]: https://github.com/oracle/helidon/compare/3.0.0-RC2...3.0.0
-[3.0.0-RC2]: https://github.com/oracle/helidon/compare/3.0.0-RC1...3.0.0-RC2
-[3.0.0-RC1]: https://github.com/oracle/helidon/compare/3.0.0-M2...3.0.0-RC1
-[3.0.0-M2]: https://github.com/oracle/helidon/compare/3.0.0-M1...3.0.0-M2
-[3.0.0-M1]: https://github.com/oracle/helidon/compare/2.4.0...3.0.0-M1
+[3.2.4]: https://github.com/helidon-io/helidon/compare/3.2.3...3.2.4
+[3.2.3]: https://github.com/helidon-io/helidon/compare/3.2.2...3.2.3
+[3.2.2]: https://github.com/helidon-io/helidon/compare/3.2.1...3.2.2
+[3.2.1]: https://github.com/helidon-io/helidon/compare/3.2.0...3.2.1
+[3.2.0]: https://github.com/helidon-io/helidon/compare/3.1.2...3.2.0
+[3.1.2]: https://github.com/helidon-io/helidon/compare/3.1.1...3.1.2
+[3.1.1]: https://github.com/helidon-io/helidon/compare/3.1.0...3.1.1
+[3.1.0]: https://github.com/helidon-io/helidon/compare/3.0.2...3.1.0
+[3.0.2]: https://github.com/helidon-io/helidon/compare/3.0.1...3.0.2
+[3.0.1]: https://github.com/helidon-io/helidon/compare/3.0.0...3.0.1
+[3.0.0]: https://github.com/helidon-io/helidon/compare/3.0.0-RC2...3.0.0
+[3.0.0-RC2]: https://github.com/helidon-io/helidon/compare/3.0.0-RC1...3.0.0-RC2
+[3.0.0-RC1]: https://github.com/helidon-io/helidon/compare/3.0.0-M2...3.0.0-RC1
+[3.0.0-M2]: https://github.com/helidon-io/helidon/compare/3.0.0-M1...3.0.0-M2
+[3.0.0-M1]: https://github.com/helidon-io/helidon/compare/2.4.0...3.0.0-M1

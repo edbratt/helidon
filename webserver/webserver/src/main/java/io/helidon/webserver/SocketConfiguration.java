@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2022 Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2023 Oracle and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,19 @@ package io.helidon.webserver;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.net.ssl.SSLContext;
 
+import io.helidon.common.configurable.AllowList;
 import io.helidon.config.Config;
 import io.helidon.config.ConfigException;
 import io.helidon.config.DeprecatedConfig;
@@ -43,6 +47,27 @@ public interface SocketConfiguration {
      * is provided.
      */
     int DEFAULT_BACKLOG_SIZE = 1024;
+
+    /**
+     * Creates a builder of {@link SocketConfiguration} class.
+     *
+     * @return a builder
+     */
+    static Builder builder() {
+        return new Builder();
+    }
+
+    /**
+     * Create a default named configuration.
+     *
+     * @param name name of the socket
+     * @return a new socket configuration with defaults
+     */
+    static SocketConfiguration create(String name) {
+        return builder()
+                .name(name)
+                .build();
+    }
 
     /**
      * Name of this socket.
@@ -204,6 +229,37 @@ public interface SocketConfiguration {
     }
 
     /**
+     * Maximum length of the response data sending buffer can keep without flushing.
+     * Depends on `backpressure-policy` what happens if max buffer size is reached.
+     *
+     * @return maximum non-flushed data Netty can buffer until backpressure is applied
+     */
+    default long backpressureBufferSize() {
+        return 5 * 1024 * 1024;
+    }
+
+    /**
+     * Strategy for applying backpressure to the reactive stream of response data.
+     * Switched default to {@link BackpressureStrategy#AUTO_FLUSH} since 3.1.1.
+     *
+     * @return strategy identifier for applying backpressure
+     */
+    default BackpressureStrategy backpressureStrategy() {
+        return BackpressureStrategy.AUTO_FLUSH;
+    }
+
+    /**
+     * When true WebServer answers with 100 continue immediately,
+     * not waiting for user to actually request the data.
+     * False is default value.
+     *
+     * @return strategy identifier for applying backpressure
+     */
+    default boolean continueImmediately() {
+        return false;
+    }
+
+    /**
      * Initial size of the buffer used to parse HTTP line and headers.
      *
      * @return initial size of the buffer
@@ -211,33 +267,59 @@ public interface SocketConfiguration {
     int initialBufferSize();
 
     /**
+     * Discovery types to identify requested URI.
+     *
+     * @return list with supported types, will always contain at least
+     * {@link io.helidon.webserver.SocketConfiguration.RequestedUriDiscoveryType#HOST}.
+     */
+    List<RequestedUriDiscoveryType> requestedUriDiscoveryTypes();
+
+    /**
+     *
+     * @return whether requested URI discovery is enabled.
+     */
+    boolean requestedUriDiscoveryEnabled();
+
+    /**
+     * The allow list for trusted proxies.
+     *
+     * @return allow list for trusted proxies
+     */
+    AllowList trustedProxies();
+
+    /**
      * Maximum length of the content of an upgrade request.
      *
      * @return maximum length of the content of an upgrade request
      */
-    default int maxUpgradeContentLength(){
+    default int maxUpgradeContentLength() {
         return 64 * 1024;
     }
 
     /**
-     * Creates a builder of {@link SocketConfiguration} class.
-     *
-     * @return a builder
+     * Types of discovery of frontend uri. Defaults to {@link #HOST} when frontend uri discovery is disabled (uses only Host
+     * header and information about current request to determine scheme, host, port, and path).
+     * Defaults to {@link #FORWARDED} when discovery is enabled. Can be explicitly configured on socket configuration builder.
      */
-    static Builder builder() {
-        return new Builder();
-    }
-
-    /**
-     * Create a default named configuration.
-     *
-     * @param name name of the socket
-     * @return a new socket configuration with defaults
-     */
-    static SocketConfiguration create(String name) {
-        return builder()
-                .name(name)
-                .build();
+    enum RequestedUriDiscoveryType {
+        /**
+         * The {@link io.helidon.common.http.Http.Header#FORWARDED} header is used to discover the original requested URI.
+         */
+        FORWARDED,
+        /**
+         * The
+         * {@link io.helidon.common.http.Http.Header#X_FORWARDED_PROTO},
+         * {@link io.helidon.common.http.Http.Header#X_FORWARDED_HOST},
+         * {@link io.helidon.common.http.Http.Header#X_FORWARDED_PORT},
+         * {@link io.helidon.common.http.Http.Header#X_FORWARDED_PREFIX}
+         * headers are used to discover the original requested URI.
+         */
+        X_FORWARDED,
+        /**
+         * This is the default, only the {@link io.helidon.common.http.Http.Header#HOST} header is used to discover
+         * requested URI.
+         */
+        HOST
     }
 
     /**
@@ -249,6 +331,12 @@ public interface SocketConfiguration {
      */
     @Configured
     interface SocketConfigurationBuilder<B extends SocketConfigurationBuilder<B>> {
+
+        /**
+         * Config key prefix for requested URI discovery settings.
+         */
+        String REQUESTED_URI_DISCOVERY_CONFIG_KEY_PREFIX = "requested-uri-discovery.";
+
         /**
          * Configures a server port to listen on with the server socket. If port is
          * {@code 0} then any available ephemeral port will be used.
@@ -363,12 +451,12 @@ public interface SocketConfiguration {
          * {@link io.helidon.common.http.Http.Status#BAD_REQUEST_400}
          * is returned.
          * <p>
-         * Default is {@code 8192}
+         * Default is {@code 16384}
          *
          * @param size maximal number of bytes of combined header values
          * @return this builder
          */
-        @ConfiguredOption("8192")
+        @ConfiguredOption("16384")
         B maxHeaderSize(int size);
 
         /**
@@ -405,6 +493,43 @@ public interface SocketConfiguration {
         B maxPayloadSize(long size);
 
         /**
+         * Maximum length of the response data sending buffer can keep without flushing.
+         * Depends on `backpressure-policy` what happens if max buffer size is reached.
+         *
+         * @param size maximum non-flushed data Netty can buffer until backpressure is applied
+         * @return this builder
+         */
+        @ConfiguredOption
+        B backpressureBufferSize(long size);
+
+        /**
+         * Sets a backpressure strategy for the server to apply against user provided response upstream.
+         *
+         * <ul>
+         * <li>LINEAR - Data are requested one-by-one, in case buffer reaches watermark, no other data is requested.</li>
+         * <li>AUTO_FLUSH - Data are requested one-by-one, in case buffer reaches watermark, no other data is requested.</li>
+         * <li>PREFETCH - After first data chunk arrives, probable number of chunks needed to fill the buffer up to watermark is calculated and requested.</li>
+         * <li>NONE - No backpressure is applied, Long.MAX_VALUE(unbounded) is requested from upstream.</li>
+         * </ul>
+         * @param backpressureStrategy One of NONE, PREFETCH, LINEAR or AUTO_FLUSH, default is AUTO_FLUSH
+         * @return this builder
+         */
+        @ConfiguredOption("AUTO_FLUSH")
+        B backpressureStrategy(BackpressureStrategy backpressureStrategy);
+
+        /**
+         * When true WebServer answers to expect continue with 100 continue immediately,
+         * not waiting for user to actually request the data.
+         * <p>
+         * Default is {@code false}
+         *
+         * @param continueImmediately , answer with 100 continue immediately after expect continue, default is false
+         * @return this builder
+         */
+        @ConfiguredOption("false")
+        B continueImmediately(boolean continueImmediately);
+
+        /**
          * Set a maximum length of the content of an upgrade request.
          * <p>
          * Default is {@code 64*1024}
@@ -414,6 +539,53 @@ public interface SocketConfiguration {
          */
         @ConfiguredOption("65536")
         B maxUpgradeContentLength(int size);
+
+        /**
+         * Adds a type of front-end URI discovery Helidon should use for this socket. Adding a discovery type automatically
+         * enables discovery for the socket.
+         *
+         * @param type type to add
+         * @return updated builder
+         */
+        B addRequestedUriDiscoveryType(RequestedUriDiscoveryType type);
+
+        /**
+         * Assigns the front-end URI discovery type(s) this socket should use. This setting automatically enables
+         * discovery for the socket.
+         *
+         * @param types {@link io.helidon.webserver.SocketConfiguration.RequestedUriDiscoveryType} values to assign
+         * @return updated builder
+         * @see #addRequestedUriDiscoveryType(io.helidon.webserver.SocketConfiguration.RequestedUriDiscoveryType)
+         * @see #requestedUriDiscoveryEnabled(boolean)
+         * @see io.helidon.webserver.ServerRequest#requestedUri()
+         */
+        @ConfiguredOption(key = REQUESTED_URI_DISCOVERY_CONFIG_KEY_PREFIX + "types",
+                          kind = ConfiguredOption.Kind.LIST,
+                          value = "FORWARDED if discovery is enabled; none otherwise")
+        B requestedUriDiscoveryTypes(List<RequestedUriDiscoveryType> types);
+
+        /**
+         * Sets whether requested URI discovery is enabled for the socket.
+         *
+         * @param enabled whether to enable discovery
+         * @return updated builder
+         * @see io.helidon.webserver.ServerRequest#requestedUri()
+         */
+        @ConfiguredOption(key = REQUESTED_URI_DISCOVERY_CONFIG_KEY_PREFIX + "enabled",
+                          value = "true if '" + REQUESTED_URI_DISCOVERY_CONFIG_KEY_PREFIX + "types' or '"
+                          + REQUESTED_URI_DISCOVERY_CONFIG_KEY_PREFIX + "trusted-proxies' is set; false otherwise")
+        B requestedUriDiscoveryEnabled(boolean enabled);
+
+        /**
+         * Assigns the settings governing the acceptance and rejection of forwarded headers from incoming requests to this socket.
+         * This setting automatically enables discovery for the socket.
+         *
+         * @param trustedProxies to apply to forwarded headers
+         * @return updated builder
+         * @see io.helidon.webserver.ServerRequest#requestedUri()
+         */
+        @ConfiguredOption(key = REQUESTED_URI_DISCOVERY_CONFIG_KEY_PREFIX + "trusted-proxies")
+        B trustedProxies(AllowList trustedProxies);
 
         /**
          * Update this socket configuration from a {@link io.helidon.config.Config}.
@@ -428,7 +600,7 @@ public interface SocketConfiguration {
             config.get("backlog").asInt().ifPresent(this::backlog);
             config.get("max-header-size").asInt().ifPresent(this::maxHeaderSize);
             config.get("max-initial-line-length").asInt().ifPresent(this::maxInitialLineLength);
-            config.get("max-payload-size").asInt().ifPresent(this::maxPayloadSize);
+            config.get("max-payload-size").asLong().ifPresent(this::maxPayloadSize);
 
             DeprecatedConfig.get(config, "timeout-millis", "timeout")
                     .asInt()
@@ -457,6 +629,16 @@ public interface SocketConfiguration {
 
             // compression
             config.get("enable-compression").asBoolean().ifPresent(this::enableCompression);
+            config.get("backpressure-buffer-size").asLong().ifPresent(this::backpressureBufferSize);
+            config.get("backpressure-strategy").as(BackpressureStrategy.class).ifPresent(this::backpressureStrategy);
+
+            // URI discovery support
+            config.get("requested-uri-discovery.enabled").as(Boolean.class).ifPresent(this::requestedUriDiscoveryEnabled);
+            config.get("requested-uri-discovery.types").asList(RequestedUriDiscoveryType.class)
+                    .ifPresent(this::requestedUriDiscoveryTypes);
+            config.get("requested-uri-discovery.trusted-proxies").as(AllowList::create)
+                    .ifPresent(this::trustedProxies);
+
             return (B) this;
         }
     }
@@ -473,6 +655,8 @@ public interface SocketConfiguration {
         static final String UNCONFIGURED_NAME = "io.helidon.webserver.SocketConfiguration.UNCONFIGURED";
         private final WebServerTls.Builder tlsConfigBuilder = WebServerTls.builder();
 
+        private static final Logger LOGGER = Logger.getLogger(SocketConfiguration.class.getName());
+
         private int port = 0;
         private InetAddress bindAddress = null;
         private int backlog = DEFAULT_BACKLOG_SIZE;
@@ -483,15 +667,22 @@ public interface SocketConfiguration {
         // methods with `name` are removed from server builder (for adding sockets)
         private String name = UNCONFIGURED_NAME;
         private boolean enabled = true;
+        // header size doubled comparing to default netty size
+        private int maxHeaderSize = 16384;
         // these values are as defined in Netty implementation
-        private int maxHeaderSize = 8192;
         private int maxInitialLineLength = 4096;
         private int maxChunkSize = 8192;
         private boolean validateHeaders = true;
         private int initialBufferSize = 128;
         private boolean enableCompression = false;
         private long maxPayloadSize = -1;
+        private BackpressureStrategy backpressureStrategy = BackpressureStrategy.AUTO_FLUSH;
+        private boolean continueImmediately = false;
         private int maxUpgradeContentLength = 64 * 1024;
+        private long maxBufferSize = 5 * 1024 * 1024;
+        private final List<RequestedUriDiscoveryType> requestedUriDiscoveryTypes = new ArrayList<>();
+        private Boolean requestedUriDiscoveryEnabled;
+        private AllowList trustedProxies;
 
         private Builder() {
         }
@@ -505,6 +696,7 @@ public interface SocketConfiguration {
             if (null == name) {
                 throw new ConfigException("Socket name must be configured for each socket");
             }
+            prepareAndCheckRequestedUriSettings();
 
             return new ServerBasicConfig.SocketConfig(this);
         }
@@ -666,6 +858,24 @@ public interface SocketConfiguration {
         }
 
         @Override
+        public Builder backpressureBufferSize(long size) {
+            this.maxBufferSize = size;
+            return this;
+        }
+
+        @Override
+        public Builder backpressureStrategy(BackpressureStrategy backpressureStrategy) {
+            this.backpressureStrategy = backpressureStrategy;
+            return this;
+        }
+
+        @Override
+        public Builder continueImmediately(boolean continueImmediately) {
+            this.continueImmediately = continueImmediately;
+            return this;
+        }
+
+        @Override
         public Builder maxUpgradeContentLength(int size) {
             this.maxUpgradeContentLength = size;
             return this;
@@ -736,8 +946,22 @@ public interface SocketConfiguration {
          * @param value compression flag
          * @return updated builder instance
          */
+        @Override
         public Builder enableCompression(boolean value) {
             this.enableCompression = value;
+            return this;
+        }
+
+        /**
+         * Configure the trusted proxy settings.
+         *
+         * @param trustedProxies prescribing proxies to be trusted
+         * @return updated builder instance
+         */
+        @Override
+        public Builder trustedProxies(AllowList trustedProxies) {
+            this.trustedProxies = trustedProxies;
+            this.requestedUriDiscoveryEnabled = true;
             return this;
         }
 
@@ -751,7 +975,28 @@ public interface SocketConfiguration {
             config.get("validate-headers").asBoolean().ifPresent(this::validateHeaders);
             config.get("initial-buffer-size").asInt().ifPresent(this::initialBufferSize);
             config.get("enable-compression").asBoolean().ifPresent(this::enableCompression);
+            config.get("backpressure-buffer-size").asLong().ifPresent(this::backpressureBufferSize);
+            config.get("backpressure-strategy").as(BackpressureStrategy.class).ifPresent(this::backpressureStrategy);
 
+            return this;
+        }
+
+        @Override
+        public Builder addRequestedUriDiscoveryType(RequestedUriDiscoveryType type) {
+            this.requestedUriDiscoveryTypes.add(type);
+            return this;
+        }
+
+        @Override
+        public Builder requestedUriDiscoveryTypes(List<RequestedUriDiscoveryType> types) {
+            requestedUriDiscoveryTypes.clear();
+            requestedUriDiscoveryTypes.addAll(types);
+            return this;
+        }
+
+        @Override
+        public Builder requestedUriDiscoveryEnabled(boolean enabled) {
+            this.requestedUriDiscoveryEnabled = enabled;
             return this;
         }
 
@@ -815,8 +1060,98 @@ public interface SocketConfiguration {
             return maxPayloadSize;
         }
 
+        long backpressureBufferSize() {
+            return maxBufferSize;
+        }
+
+        BackpressureStrategy backpressureStrategy() {
+            return backpressureStrategy;
+        }
+
+        boolean continueImmediately() {
+            return continueImmediately;
+        }
+
         int maxUpgradeContentLength() {
             return maxUpgradeContentLength;
+        }
+
+        List<RequestedUriDiscoveryType> requestedUriDiscoveryTypes() {
+            if (requestedUriDiscoveryEnabled && !requestedUriDiscoveryTypes.isEmpty()) {
+                return requestedUriDiscoveryTypes;
+            }
+            return List.of(RequestedUriDiscoveryType.HOST);
+        }
+
+        AllowList trustedProxies() {
+            return trustedProxies;
+        }
+
+        boolean requestedUriDiscoveryEnabled() {
+            return requestedUriDiscoveryEnabled;
+        }
+
+        /**
+         * Checks validity of requested URI settings and supplies defaults for omitted settings.
+         * <p>The behavior of `requested-uri-discovery` settings can be summarized as follows:
+         *     <ul>
+         *     <li>The `requested-uri-discovery` settings are optional.</li>
+         *     <li>If `requested-uri-discovery` is absent or is present with `enabled` explicitly set to `false`, Helidon
+         *     ignores any {@code Forwarded} or {@code X-Forwarded-*} headers and adopts the
+         *     {@code HOST} discovery type. That is, Helidon uses the {@code Host} header for the host
+         *     and the request's scheme and port.</li>
+         *     <li>If `requested-uri-discovery` is present and enabled, either because {@code enabled} is set to {@code true}
+         *     or {@code types} or {@code trusted-proxies} has been set, then Helidon performs a simple validity
+         *     check before adopting the selected discovery behavior: If {@code types} is specified and includes
+         *     either {@code FORWARDED} or {@code X_FORWARDED} then {@code trusted-proxies} must also be set to at least
+         *     one value. Put another way, if requested URI discovery is enabled then {@code trusted-proxies} can be unspecified
+         *     only if {@code types} contains only {@code HOST}.</li>
+         *     </ul>
+         * </p>
+         */
+        private void prepareAndCheckRequestedUriSettings() {
+            boolean isDiscoveryEnabledDefaulted = false;
+            if (requestedUriDiscoveryEnabled == null) {
+                requestedUriDiscoveryEnabled = !requestedUriDiscoveryTypes.isEmpty() || trustedProxies != null;
+                isDiscoveryEnabledDefaulted = true;
+            }
+
+            boolean areDiscoveryTypesDefaulted = false;
+
+            if (requestedUriDiscoveryEnabled) {
+                // Configure a default type if discovery is enabled and no explicit types are configured.
+                if (this.requestedUriDiscoveryTypes.isEmpty()) {
+                    areDiscoveryTypesDefaulted = true;
+                    this.requestedUriDiscoveryTypes.add(RequestedUriDiscoveryType.FORWARDED);
+                }
+
+                // Require _some_ settings for trusted proxies (except for HOST discovery) so the socket does not start unsafely
+                // by accident. The user _can_ set allow.all to run the socket unsafely but at least that way it was
+                // an explicit choice.
+                if (trustedProxies == null && !isDiscoveryTypesOnlyHost()) {
+                    throw new UnsafeRequestedUriSettingsException(this, areDiscoveryTypesDefaulted);
+                }
+            } else {
+                // Discovery is disabled so ignore any explicit settings of discovery type and use HOST discovery.
+                if (!requestedUriDiscoveryTypes.isEmpty() && !isDiscoveryTypesOnlyHost()) {
+                    LOGGER.log(Level.INFO, """
+                            Ignoring explicit settings of requested-uri-discovery types and trusted-proxies because
+                            requested-uri-discovery.enabled {0} to false
+                            """, isDiscoveryEnabledDefaulted ? " defaulted" : "was set");
+                }
+                requestedUriDiscoveryTypes.clear();
+                requestedUriDiscoveryTypes.add(RequestedUriDiscoveryType.HOST);
+            }
+            if (trustedProxies == null) {
+                trustedProxies = AllowList.builder()
+                        .addDenied(s -> true)
+                        .build();
+            }
+        }
+
+        private boolean isDiscoveryTypesOnlyHost() {
+            return requestedUriDiscoveryTypes.size() == 1
+                    && requestedUriDiscoveryTypes.contains(RequestedUriDiscoveryType.HOST);
         }
     }
 }

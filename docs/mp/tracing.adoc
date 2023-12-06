@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
-    Copyright (c) 2018, 2022 Oracle and/or its affiliates.
+    Copyright (c) 2018, 2023 Oracle and/or its affiliates.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -31,6 +31,8 @@ include::{rootdir}/includes/mp.adoc[]
 - <<Maven Coordinates, Maven Coordinates>>
 - <<Usage, Usage>>
 - <<Configuration, Configuration>>
+** <<Enabling and Disabling Tracing, Enabling and Disabling Tracing>>
+** <<Configuration options, Configuration Options>>
 - <<Examples, Examples>>
 - <<Additional Information, Additional Information>>
 ** <<Zipkin Tracing, Zipkin Tracing>>
@@ -86,14 +88,14 @@ is defined.
 
 include::{rootdir}/config/io_helidon_tracing_Tracer.adoc[tag=config,levelOffset=2]
 
-To disable Helidon tracing for web server and security:
+To disable Helidon tracing for WebServer and security:
 [source,properties]
 ----
 tracing.components.web-server.enabled=false
 tracing.components.security.enabled=false
 ----
 
-To disables MP Tracing as by specification:
+To disable MP Tracing per specification:
 [source,properties]
 ----
 mp.opentracing.server.skip-pattern=.*
@@ -123,17 +125,17 @@ tracing:
 
 === Controlling Tracing Output
 
-For Web Server we have a path based support for configuring tracing, in addition
+For WebServer we have path-based support for configuring tracing, in addition
 to the configuration described above.
 
-Configuration of path can use any path string supported by the
-Web Server. The configuration itself has the same possibilities
+Path configuration can use any path string supported by the
+WebServer. The configuration itself has the same possibilities
 as traced configuration described above. The path specific configuration
 will be merged with global configuration (path is the "newer" configuration, global is the "older")
 
 ==== Renaming top level span using request properties
 
-To have a nicer overview in search pane of a tracer, you can customize the top-level span name using configuration.
+To have a better overview in the search pane of a tracer, you can customize the top-level span name using configuration.
 
 Example:
 [source,properties]
@@ -158,7 +160,7 @@ The examples in this guide demonstrate how to integrate tracing with Helidon, ho
 across multiple services, and how to integrate tracing with Kubernetes.  All examples use Zipkin and traces
 will be viewed using both the Zipkin API and UI.
 
-=== Set up Zipkin
+=== Set Up Zipkin
 
 First, you need to run the Zipkin tracer.  Helidon will communicate with this tracer at runtime.
 
@@ -771,11 +773,14 @@ spec:
       name: http
 ---
 kind: Deployment
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 metadata:
   name: helidon-tracing
 spec:
   replicas: 1 # <2>
+  selector:
+    matchLabels:
+      app: helidon-tracing
   template:
     metadata:
       labels:
@@ -844,7 +849,7 @@ docker rm -f zipkin
 ----
 
 
-== Creating custom spans
+== Creating Custom Spans
 
 Helidon MP fully supports MicroProfile OpenTracing.
 You can add custom spans using `@Traced` annotation on methods of CDI beans.
@@ -854,7 +859,7 @@ _If you invoke a method on the same class, `@Traced` annotation would be ignored
 invoked through a CDI proxy and as such cannot be intercepted.
 To make sure `@Traced` is honored, use it on JAX-RS resource methods and on CDI bean methods used from other beans._
 
-== Trace propagation across services
+== Trace Propagation Across Services
 Automated trace propagation is supported currently only with Jersey client.
 
 Tracing propagation works automatically as long as you run within the scope of

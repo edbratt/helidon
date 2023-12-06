@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2022 Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2023 Oracle and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,12 +20,14 @@ import java.net.InetAddress;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
 import javax.net.ssl.SSLContext;
 
+import io.helidon.common.configurable.AllowList;
 import io.helidon.common.context.Context;
 import io.helidon.tracing.Tracer;
 
@@ -42,6 +44,8 @@ class ServerBasicConfig implements ServerConfiguration {
     private final Optional<Transport> transport;
     private final Context context;
     private final boolean printFeatureDetails;
+    private final AllowList trustedProxies;
+    private final boolean isRequestedUriDiscoveryEnabled;
 
     /**
      * Creates new instance.
@@ -57,6 +61,8 @@ class ServerBasicConfig implements ServerConfiguration {
         this.transport = builder.transport();
         this.context = builder.context();
         this.printFeatureDetails = builder.printFeatureDetails();
+        this.trustedProxies = builder.defaultSocketBuilder().trustedProxies();
+        this.isRequestedUriDiscoveryEnabled = builder.defaultSocketBuilder().requestedUriDiscoveryEnabled();
 
         HashMap<String, SocketConfiguration> map = new HashMap<>(builder.sockets());
         map.put(WebServer.DEFAULT_SOCKET_NAME, this.socketConfig);
@@ -64,21 +70,25 @@ class ServerBasicConfig implements ServerConfiguration {
     }
 
     @Override
+    @SuppressWarnings({"deprecation", "removal"})
     public SSLContext ssl() {
         return socketConfig.ssl();
     }
 
     @Override
+    @SuppressWarnings({"deprecation", "removal"})
     public Set<String> enabledSslProtocols() {
         return socketConfig.enabledSslProtocols();
     }
 
     @Override
+    @SuppressWarnings({"deprecation", "removal"})
     public Set<String> allowedCipherSuite() {
         return socketConfig.allowedCipherSuite();
     }
 
     @Override
+    @SuppressWarnings({"deprecation", "removal"})
     public ClientAuthentication clientAuth() {
         return socketConfig.clientAuth();
     }
@@ -183,7 +193,20 @@ class ServerBasicConfig implements ServerConfiguration {
         return socketConfig.enableCompression();
     }
 
+    @Override
+    public List<RequestedUriDiscoveryType> requestedUriDiscoveryTypes() {
+        return socketConfig.requestedUriDiscoveryTypes();
+    }
 
+    @Override
+    public AllowList trustedProxies() {
+        return trustedProxies;
+    }
+
+    @Override
+    public boolean requestedUriDiscoveryEnabled() {
+        return isRequestedUriDiscoveryEnabled;
+    }
 
     static class SocketConfig implements SocketConfiguration {
 
@@ -202,7 +225,13 @@ class ServerBasicConfig implements ServerConfiguration {
         private final int initialBufferSize;
         private final boolean enableCompression;
         private final long maxPayloadSize;
+        private final long backpressureBufferSize;
+        private final BackpressureStrategy backpressureStrategy;
+        private final boolean continueImmediately;
         private final int maxUpgradeContentLength;
+        private final List<RequestedUriDiscoveryType> requestedUriDiscoveryTypes;
+        private final AllowList trustedProxies;
+        private final boolean isRequestedUriDiscoveryEnabled;
 
         /**
          * Creates new instance.
@@ -222,9 +251,15 @@ class ServerBasicConfig implements ServerConfiguration {
             this.initialBufferSize = builder.initialBufferSize();
             this.enableCompression = builder.enableCompression();
             this.maxPayloadSize = builder.maxPayloadSize();
+            this.backpressureBufferSize = builder.backpressureBufferSize();
+            this.backpressureStrategy = builder.backpressureStrategy();
+            this.continueImmediately = builder.continueImmediately();
             this.maxUpgradeContentLength = builder.maxUpgradeContentLength();
             WebServerTls webServerTls = builder.tlsConfig();
             this.webServerTls = webServerTls.enabled() ? webServerTls : null;
+            this.requestedUriDiscoveryTypes = builder.requestedUriDiscoveryTypes();
+            this.trustedProxies = builder.trustedProxies();
+            this.isRequestedUriDiscoveryEnabled = builder.requestedUriDiscoveryEnabled();
         }
 
         @Override
@@ -258,21 +293,25 @@ class ServerBasicConfig implements ServerConfiguration {
         }
 
         @Override
+        @SuppressWarnings({"deprecation", "removal"})
         public SSLContext ssl() {
             return tls().map(WebServerTls::sslContext).orElse(null);
         }
 
         @Override
+        @SuppressWarnings({"deprecation", "removal"})
         public Set<String> enabledSslProtocols() {
             return tls().map(WebServerTls::enabledTlsProtocols).map(Set::copyOf).orElseGet(Set::of);
         }
 
         @Override
+        @SuppressWarnings({"deprecation", "removal"})
         public Set<String> allowedCipherSuite() {
             return tls().map(WebServerTls::cipherSuite).orElseGet(Set::of);
         }
 
         @Override
+        @SuppressWarnings({"deprecation", "removal"})
         public ClientAuthentication clientAuth() {
             return tls().map(WebServerTls::clientAuth).orElse(ClientAuthentication.NONE);
         }
@@ -325,6 +364,36 @@ class ServerBasicConfig implements ServerConfiguration {
         @Override
         public long maxPayloadSize() {
             return maxPayloadSize;
+        }
+
+        @Override
+        public long backpressureBufferSize() {
+            return backpressureBufferSize;
+        }
+
+        @Override
+        public BackpressureStrategy backpressureStrategy() {
+            return backpressureStrategy;
+        }
+
+        @Override
+        public boolean continueImmediately() {
+            return continueImmediately;
+        }
+
+        @Override
+        public List<RequestedUriDiscoveryType> requestedUriDiscoveryTypes() {
+            return requestedUriDiscoveryTypes;
+        }
+
+        @Override
+        public AllowList trustedProxies() {
+            return trustedProxies;
+        }
+
+        @Override
+        public boolean requestedUriDiscoveryEnabled() {
+            return isRequestedUriDiscoveryEnabled;
         }
     }
 }

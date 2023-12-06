@@ -9,6 +9,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
+{{#FileServiceTest-helidon-imports}}
+import {{.}};
+{{/FileServiceTest-helidon-imports}}
 import io.helidon.microprofile.server.JaxRsCdiExtension;
 import io.helidon.microprofile.server.ServerCdiExtension;
 import io.helidon.microprofile.tests.junit5.AddBean;
@@ -46,15 +49,18 @@ import static org.hamcrest.Matchers.notNullValue;
 @AddExtension(ServerCdiExtension.class)
 @AddExtension(JaxRsCdiExtension.class)
 @AddExtension(CdiComponentProvider.class)
+{{#FileServiceTest-annotations}}
+{{.}}
+{{/FileServiceTest-annotations}}
 @AddBean(FileService.class)
 @AddBean(FileStorage.class)
 @AddBean(MultiPartFeatureProvider.class)
 @TestMethodOrder(OrderAnnotation.class)
-public class FileServiceTest {
+class FileServiceTest {
 
     @Test
     @Order(1)
-    public void testUpload(WebTarget target) throws IOException {
+    void testUpload(WebTarget target) throws IOException {
         Path tempDirectory = Files.createTempDirectory(null);
         File file = Files.write(tempDirectory.resolve("foo.txt"), "bar\n".getBytes(StandardCharsets.UTF_8)).toFile();
         MultiPart multipart = new MultiPart()
@@ -71,7 +77,7 @@ public class FileServiceTest {
 
     @Test
     @Order(2)
-    public void testList(WebTarget target) {
+    void testList(WebTarget target) {
         try (Response response = target
                 .path("/multipart")
                 .request(MediaType.APPLICATION_JSON_TYPE)
@@ -86,7 +92,7 @@ public class FileServiceTest {
 
     @Test
     @Order(3)
-    public void testDownload(WebTarget target) throws IOException {
+    void testDownload(WebTarget target) throws IOException {
         try (Response response = target
                 .register(MultiPartFeature.class)
                 .path("/multipart/foo.txt")

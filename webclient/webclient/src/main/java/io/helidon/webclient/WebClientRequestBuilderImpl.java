@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022 Oracle and/or its affiliates.
+ * Copyright (c) 2020, 2023 Oracle and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,6 +66,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.DefaultHttpRequest;
@@ -75,6 +76,9 @@ import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.resolver.NoopAddressResolverGroup;
+import io.netty.resolver.dns.DnsServerAddressStreamProviders;
+import io.netty.resolver.dns.RoundRobinDnsAddressResolverGroup;
 import io.netty.util.AsciiString;
 import io.netty.util.AttributeKey;
 
@@ -85,10 +89,10 @@ class WebClientRequestBuilderImpl implements WebClientRequestBuilder {
 
     private static final Logger LOGGER = Logger.getLogger(WebClientRequestBuilderImpl.class.getName());
 
-    private static final Map<ConnectionIdent, Set<ChannelRecord>> CHANNEL_CACHE = new ConcurrentHashMap<>();
     private static final List<DataPropagationProvider> PROPAGATION_PROVIDERS = HelidonServiceLoader
             .builder(ServiceLoader.load(DataPropagationProvider.class)).build().asList();
 
+    static final Map<ConnectionIdent, Set<ChannelRecord>> CHANNEL_CACHE = new ConcurrentHashMap<>();
     static final AttributeKey<WebClientRequestImpl> REQUEST = AttributeKey.valueOf("request");
     static final AttributeKey<CompletableFuture<WebClientServiceResponse>> RECEIVED = AttributeKey.valueOf("received");
     static final AttributeKey<CompletableFuture<WebClientServiceResponse>> COMPLETED = AttributeKey.valueOf("completed");
@@ -140,6 +144,7 @@ class WebClientRequestBuilderImpl implements WebClientRequestBuilder {
     private boolean keepAlive;
     private Long requestId;
     private boolean allowChunkedEncoding;
+    private DnsResolverType dnsResolverType;
 
     private WebClientRequestBuilderImpl(NioEventLoopGroup eventGroup,
                                         WebClientConfiguration configuration,
@@ -170,6 +175,7 @@ class WebClientRequestBuilderImpl implements WebClientRequestBuilder {
         this.connectTimeout = configuration.connectTimeout();
         this.proxy = configuration.proxy().orElse(Proxy.noProxy());
         this.keepAlive = configuration.keepAlive();
+        this.dnsResolverType = configuration.dnsResolverType();
     }
 
     static WebClientRequestBuilder create(NioEventLoopGroup eventGroup,
@@ -188,12 +194,8 @@ class WebClientRequestBuilderImpl implements WebClientRequestBuilder {
         WebClientRequestBuilderImpl builder = new WebClientRequestBuilderImpl(NettyClient.eventGroup(),
                                                                               clientRequest.configuration(),
                                                                               Http.Method.GET);
-        builder.headers(clientRequest.headers());
-        builder.queryParams(clientRequest.queryParams());
-        builder.uri = clientRequest.uri();
         builder.httpVersion = clientRequest.version();
         builder.proxy = clientRequest.proxy();
-        builder.fragment = clientRequest.fragment();
         builder.redirectionCount = clientRequest.redirectionCount() + 1;
         int maxRedirects = builder.configuration.maxRedirects();
         if (builder.redirectionCount > maxRedirects) {
@@ -240,7 +242,16 @@ class WebClientRequestBuilderImpl implements WebClientRequestBuilder {
             LOGGER.finest(() -> "Removing from channel cache. Connection ident ->  " + key
                     + ", channel -> " + channel.hashCode());
         }
-        CHANNEL_CACHE.get(key).remove(new ChannelRecord(channel));
+        Set<ChannelRecord> channelSet = CHANNEL_CACHE.get(key);
+        if (channelSet != null) {
+            // remove entry from set
+            channelSet.remove(new ChannelRecord(channel));
+
+            // remove set from map if empty
+            if (channelSet.isEmpty()) {
+                CHANNEL_CACHE.remove(key);
+            }
+        }
     }
 
     @Override
@@ -584,6 +595,18 @@ class WebClientRequestBuilderImpl implements WebClientRequestBuilder {
                     .handler(new NettyClientInitializer(requestConfiguration))
                     .option(ChannelOption.SO_KEEPALIVE, keepAlive)
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, (int) connectTimeout.toMillis());
+
+            switch (dnsResolverType) {
+                case ROUND_ROBIN:
+                    bootstrap.resolver(new RoundRobinDnsAddressResolverGroup(NioDatagramChannel.class,
+                                                                             DnsServerAddressStreamProviders.platformDefault()));
+                    break;
+                case NONE:
+                    bootstrap.resolver(NoopAddressResolverGroup.INSTANCE);
+                    break;
+                default:
+                    // Do nothing and default bootstrap resolver will be used
+            }
 
             ChannelFuture channelFuture = keepAlive
                     ? obtainChannelFuture(requestConfiguration, bootstrap)
@@ -944,17 +967,17 @@ class WebClientRequestBuilderImpl implements WebClientRequestBuilder {
         }
     }
 
-    private static class ChannelRecord {
+    static class ChannelRecord {
 
         private final ChannelFuture channelFuture;
         private final Channel channel;
 
-        private ChannelRecord(ChannelFuture channelFuture) {
+        ChannelRecord(ChannelFuture channelFuture) {
             this.channelFuture = channelFuture;
             this.channel = channelFuture.channel();
         }
 
-        private ChannelRecord(Channel channel) {
+        ChannelRecord(Channel channel) {
             this.channelFuture = null;
             this.channel = channel;
         }

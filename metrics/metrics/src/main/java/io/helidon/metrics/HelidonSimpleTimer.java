@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022 Oracle and/or its affiliates.
+ * Copyright (c) 2020, 2023 Oracle and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -94,7 +94,7 @@ final class HelidonSimpleTimer extends MetricImpl implements SimpleTimer {
     }
 
     @Override
-    public void prometheusData(StringBuilder sb, MetricID metricID, boolean withHelpType) {
+    public void prometheusData(StringBuilder sb, MetricID metricID, boolean withHelpType, boolean isStrictExemplars) {
         String promName;
         String name = metricID.getName();
         String tags = prometheusTags(metricID.getTags());
@@ -111,7 +111,8 @@ final class HelidonSimpleTimer extends MetricImpl implements SimpleTimer {
         SimpleTimerImpl simpleTimerImpl = (delegate instanceof SimpleTimerImpl) ? ((SimpleTimerImpl) delegate) : null;
         Sample.Labeled sample = simpleTimerImpl != null ? simpleTimerImpl.sample : null;
         if (sample != null) {
-            sb.append(prometheusExemplar(elapsedTimeInSeconds(sample.value()), simpleTimerImpl.sample));
+            // Always emit an exemplar for a counter (if enabled), even with strict exemplars.
+            sb.append(prometheusExemplar(1, sample)); // exemplar always contributes 1 to the count
         }
         sb.append("\n");
 
@@ -124,6 +125,7 @@ final class HelidonSimpleTimer extends MetricImpl implements SimpleTimer {
                 .append(tags)
                 .append(" ")
                 .append(elapsedTimeInSeconds())
+                .append(isStrictExemplars ? "" : exemplarForElapsedTime(sample))
                 .append("\n");
 
         promName = prometheusNameWithUnits(name + "_maxTimeDuration", Optional.of(MetricUnits.SECONDS));
@@ -134,6 +136,8 @@ final class HelidonSimpleTimer extends MetricImpl implements SimpleTimer {
                 .append(tags)
                 .append(" ")
                 .append(durationPrometheusOutput(getMaxTimeDuration()))
+                .append(exemplarForElapsedTime(getMaxTimeDuration(),
+                                               simpleTimerImpl == null ? null : simpleTimerImpl.lastMaxSample))
                 .append("\n");
 
         promName = prometheusNameWithUnits(name + "_minTimeDuration", Optional.of(MetricUnits.SECONDS));
@@ -144,13 +148,9 @@ final class HelidonSimpleTimer extends MetricImpl implements SimpleTimer {
                 .append(tags)
                 .append(" ")
                 .append(durationPrometheusOutput(getMinTimeDuration()))
+                .append(exemplarForElapsedTime(getMinTimeDuration(),
+                                               simpleTimerImpl == null ? null : simpleTimerImpl.lastMinSample))
                 .append("\n");
-
-
-        if (sample != null) {
-            sb.append(prometheusExemplar(elapsedTimeInSeconds(sample.value()), sample));
-        }
-        sb.append("\n");
     }
 
     @Override
@@ -166,6 +166,15 @@ final class HelidonSimpleTimer extends MetricImpl implements SimpleTimer {
                 .add(jsonFullKey("maxTimeDuration", metricID), jsonDuration(getMaxTimeDuration()))
                 .add(jsonFullKey("minTimeDuration", metricID), jsonDuration(getMinTimeDuration()));
         builder.add(metricID.getName(), myBuilder);
+    }
+
+    private String exemplarForElapsedTime(Duration duration, Sample.Labeled sample) {
+        // If the duration is null, then there is no value to which a sample might have contributed. So there's no exemplar.
+        return duration == null ? "" : exemplarForElapsedTime(sample);
+    }
+
+    private String exemplarForElapsedTime(Sample.Labeled sample) {
+        return sample == null ? "" : prometheusExemplar(sample.value(), sample);
     }
 
     private static String durationPrometheusOutput(Duration duration) {
@@ -221,6 +230,10 @@ final class HelidonSimpleTimer extends MetricImpl implements SimpleTimer {
         private long lastMinute;
 
         private Sample.Labeled sample = null;
+        private Sample.Labeled currentMaxSample = null;
+        private Sample.Labeled currentMinSample = null;
+        private Sample.Labeled lastMaxSample = null;
+        private Sample.Labeled lastMinSample = null;
 
         private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
@@ -300,9 +313,11 @@ final class HelidonSimpleTimer extends MetricImpl implements SimpleTimer {
                     updateStateLocked();
                     if (currentMin == null || currentMin.toNanos() > nanos) {
                         currentMin = Duration.ofNanos(nanos);
+                        currentMinSample = sample;
                     }
                     if (currentMax == null || currentMax.toNanos() < nanos) {
                         currentMax = Duration.ofNanos(nanos);
+                        currentMaxSample = sample;
                     }
                 }
                 return null;
@@ -324,6 +339,10 @@ final class HelidonSimpleTimer extends MetricImpl implements SimpleTimer {
                 lastMin = currentMin;
                 currentMax = null;
                 currentMin = null;
+                lastMaxSample = currentMaxSample;
+                lastMinSample = currentMinSample;
+                currentMaxSample = null;
+                currentMinSample = null;
                 lastMinute = currentMinute;
             }
         }
@@ -341,12 +360,19 @@ final class HelidonSimpleTimer extends MetricImpl implements SimpleTimer {
                     && elapsed.equals(that.elapsed)
                     && Objects.equals(lastMin, that.lastMin)
                     && Objects.equals(lastMax, that.lastMax)
-                    && Objects.equals(sample, that.sample);
+                    && Objects.equals(sample, that.sample)
+                    && Objects.equals(currentMin, that.currentMin)
+                    && Objects.equals(currentMax, that.currentMax)
+                    && Objects.equals(currentMinSample, that.currentMinSample)
+                    && Objects.equals(currentMaxSample, that.currentMaxSample)
+                    && Objects.equals(lastMinSample, that.lastMinSample)
+                    && Objects.equals(lastMaxSample, that.lastMaxSample);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(counter, elapsed, lastMin, lastMax, sample);
+            return Objects.hash(counter, elapsed, lastMin, lastMax, sample, currentMin, currentMax,
+                                currentMinSample, currentMaxSample, lastMinSample, lastMaxSample);
         }
 
         private <T> T writeAccess(Callable<T> action) {

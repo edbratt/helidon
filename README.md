@@ -18,7 +18,7 @@
 Project Helidon is a set of Java Libraries for writing microservices.
 Helidon supports two programming models:
 
-* Helidon MP: [MicroProfile](https://microprofile.io/) 3.3
+* Helidon MP: [MicroProfile](https://microprofile.io/) 5.0
 * Helidon SE: a small, functional style API
 
 In either case your application is just a Java SE program.
@@ -30,6 +30,8 @@ Helidon is available under Apache License 2.0.
 ## Documentation
 
 Latest documentation and javadocs are available at <https://helidon.io/docs/latest>.
+
+Helidon White Paper is available [here](https://www.oracle.com/a/ocom/docs/technical-brief--helidon-report.pdf).
 
 ## Get Started
 
@@ -62,6 +64,18 @@ PowerShell -Command Invoke-WebRequest -Uri "https://helidon.io/cli/latest/window
 ```
 
 See this [document](HELIDON-CLI.md) for more info.
+
+## Books
+
+The book *Beginning Helidon* is highly recommended for all Helidon 3.x users:
+
+<p>
+    <a href="https://a.co/d/0niQnwC">
+       <img src="./etc/images/Helidon_book.png">
+    </a>
+</p>
+
+Available at [Amazon](https://a.co/d/9RFS6tq) and all other bookstores.
 
 ## Build
 

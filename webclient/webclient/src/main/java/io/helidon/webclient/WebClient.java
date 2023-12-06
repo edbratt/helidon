@@ -146,7 +146,10 @@ public interface WebClient {
                                    ParentingMediaContextBuilder<Builder>,
                                    MediaContextBuilder<Builder> {
 
-        private final WebClientConfiguration.Builder<?, ?> configuration = NettyClient.SHARED_CONFIGURATION.derive();
+        private final WebClientConfiguration.Builder<?, ?> configuration = NettyClient.SHARED_CONFIGURATION.derive()
+                //We need to clear cookie store when new WebClient is created
+                //to prevent cookie propagation across the multiple clients
+                .cookieStore(null);
         private final HelidonServiceLoader.Builder<WebClientServiceProvider> services = HelidonServiceLoader
                 .builder(ServiceLoader.load(WebClientServiceProvider.class));
         private final List<WebClientService> webClientServices = new ArrayList<>();
@@ -201,6 +204,18 @@ public interface WebClient {
          */
         public Builder proxy(Proxy proxy) {
             this.configuration.proxy(proxy);
+            return this;
+        }
+
+        /**
+         * Can be set to {@code true} to force the use of relative URIs in all requests,
+         * regardless of the presence or absence of proxies or no-proxy lists.
+         *
+         * @param relativeUris relative URIs flag
+         * @return updated builder instance
+         */
+        public Builder relativeUris(boolean relativeUris) {
+            this.configuration.relativeUris(relativeUris);
             return this;
         }
 
@@ -400,6 +415,28 @@ public interface WebClient {
          */
         public Builder validateHeaders(boolean validate) {
             configuration.validateHeaders(validate);
+            return this;
+        }
+
+        /**
+         * Set which type of DNS resolver should be used.
+         *
+         * @param dnsResolverType type of the DNS resolver to be used
+         * @return updated builder instance
+         */
+        public Builder dnsResolverType(DnsResolverType dnsResolverType) {
+            configuration.dnsResolverType(dnsResolverType);
+            return this;
+        }
+
+        /**
+         * Set whether cookies should be automatically saved to the store.
+         *
+         * @param enableAutomaticCookieStore whether to save cookies, default is false
+         * @return updated builder instance
+         */
+        public Builder enableAutomaticCookieStore(boolean enableAutomaticCookieStore) {
+            configuration.enableAutomaticCookieStore(enableAutomaticCookieStore);
             return this;
         }
 

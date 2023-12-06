@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 
-    Copyright (c) 2021, 2022 Oracle and/or its affiliates.
+    Copyright (c) 2021, 2023 Oracle and/or its affiliates.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-= Oracle Cloud Infrastructure Integration
+= Oracle Cloud Infrastructure
 :description: Helidon OCI Integration
 :keywords: oci, cdi
 :feature-name: OCI Integration
@@ -30,14 +30,16 @@ include::{rootdir}/includes/mp.adoc[]
 - <<Overview, Overview>>
 - <<maven-coordinates, Maven Coordinates>>
 - <<Usage, Usage>>
+* <<Configuring the Helidon OCI SDK Extension, Configuring the Helidon OCI SDK Extension>>
+* <<Accessing OCI Services, Accessing OCI Services>>
 - <<Examples, Examples>>
+* <<Injecting an Object Storage Client, Injecting an Object Storage Client>>
+* <<Using the Object Storage Client, Using the Object Storage Client>>
 - <<References, References>>
 
 == Overview
 
-Helidon MP OCI Integration provides easy access to Oracle Cloud Infrastructure using the OCI Java SDK.
-
-NOTE: OCI SDK uses JAX-RS Client 2.1.6 (javax package names), which makes it incompatible with Helidon 3 applications and any application that uses JAX-RS 3 (jakarta package naming). See <<oci-compatibility, Resolving compatibility issue with OCI SDK>> for detailed information on how to work around this issue.
+Helidon MP OCI Integration provides easy access to Oracle Cloud Infrastructure using the OCI Java SDK.`
 
 include::{rootdir}/includes/dependencies.adoc[]
 
@@ -130,14 +132,12 @@ public class MyClass {
 The extension implements this injection point by creating an Object Storage client
 object in the link:{jakarta-inject-javadoc-url}/jakarta/inject/Singleton.html[singleton scope].
 
-=== Using the Object Storage client
+=== Using the Object Storage Client
 
 Once you have injected an ObjectStorage client you can use it as described in:
 
 * link:{oci-javasdk-objstore-javadoc-base-url}/package-summary.html[OCI SDK Object Storage Javadocs]
 * link:{oci-objstore-url}[OCI Object Storage Overview]
-
-include::{rootdir}/includes/oci.adoc[leveloffset=+1]
 
 == References
 

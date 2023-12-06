@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2021 Oracle and/or its affiliates.
+ * Copyright (c) 2020, 2023 Oracle and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package io.helidon.tests.integration.jpa.simple.test;
 
 import java.util.List;
 
+import io.helidon.tests.integration.jpa.simple.DbUtils;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaDelete;
@@ -35,9 +36,10 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
 
 /**
  * Verify delete operations of ORM.
@@ -67,12 +69,13 @@ public class DeleteIT {
     @BeforeAll
     public static void setup() {
         pu = PU.getInstance();
+        pu.tx(pu -> DbUtils.dbInit(pu));
         dbInsertMisty();
     }
 
     @AfterAll
     public static void destroy() {
-        dbDeleteMisty();
+        pu.tx(pu -> DbUtils.dbCleanup(pu));
         pu = null;
     }
 
@@ -95,7 +98,7 @@ public class DeleteIT {
         pu.tx(pu -> {
             final EntityManager em = pu.getCleanEm();
             Pokemon dbStaryu = em.find(Pokemon.class, ids[0]);
-            assertNull(dbStaryu);
+            assertThat(dbStaryu, nullValue());
         });
     }
 
@@ -111,7 +114,7 @@ public class DeleteIT {
                     "DELETE FROM Pokemon p WHERE p.name = :name")
                     .setParameter("name", "Psyduck")
                     .executeUpdate();
-            assertEquals(1, deleted);
+            assertThat(deleted, is(1));
         });
         pu.tx(pu -> {
             final EntityManager em = pu.getCleanEm();
@@ -119,7 +122,7 @@ public class DeleteIT {
                     "SELECT p FROM Pokemon p WHERE p.name=:name", Pokemon.class)
                     .setParameter("name", "Psyduck")
                     .getResultList();
-            assertTrue(pokemons.isEmpty());
+            assertThat(pokemons, empty());
         });
     }
 
@@ -136,7 +139,7 @@ public class DeleteIT {
             Root<Pokemon> pokemonRoot = cu.from(Pokemon.class);
             cu.where(cb.equal(pokemonRoot.get("name"), "Corsola"));
             int deleted = em.createQuery(cu).executeUpdate();
-            assertEquals(1, deleted);
+            assertThat(deleted, is(1));
         });
         pu.tx(pu -> {
             final EntityManager em = pu.getCleanEm();
@@ -146,7 +149,7 @@ public class DeleteIT {
             cq.select(pokemonRoot)
                     .where(cb.equal(pokemonRoot.get("name"), "Corsola"));
             List<Pokemon> pokemons = em.createQuery(cq).getResultList();
-            assertTrue(pokemons.isEmpty());
+            assertThat(pokemons, empty());
         });
     }
 
@@ -174,7 +177,7 @@ public class DeleteIT {
                     "SELECT c FROM City c WHERE c.name = :name", City.class)
                     .setParameter("name", "Viridian City")
                     .getResultList();
-            assertTrue(cities.isEmpty());
+            assertThat(cities, empty());
         });
     }
 

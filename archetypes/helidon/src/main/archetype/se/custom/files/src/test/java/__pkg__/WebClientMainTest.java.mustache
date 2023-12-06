@@ -6,43 +6,45 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.TimeUnit;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-public class WebClientMainTest {
+class WebClientMainTest {
 
     private static WebServer webServer;
     private static WebClient webClient;
 
     @BeforeAll
-    public static void startTheServer() {
-        webServer = Main.startServer().await();
+    static void startTheServer() {
+        webServer = Main.startServer().await(Duration.ofSeconds(10));
         webClient = WebClient.builder()
                 .baseUri("http://localhost:" + webServer.port() + "/simple-greet")
                 .build();
     }
 
     @AfterAll
-    public static void stopServer() throws Exception {
+    static void stopServer() {
         if (webServer != null) {
             webServer.shutdown()
-                    .toCompletableFuture()
-                    .get(10, TimeUnit.SECONDS);
+                    .await(10, TimeUnit.SECONDS);
         }
     }
 
     @Test
-    public void getSimpleGreetTest() throws Exception {
+    void getSimpleGreetTest() {
         WebClientMain.performGetMethod(webClient)
 {{#media-json}}
-                .thenAccept(it -> assertThat(it, is("{\"message\":\"Hello World!\"}")))
+                .forSingle(it -> assertThat(it, is("{\"message\":\"Hello World!\"}")))
 {{/media-json}}
 {{^media-json}}
-                .thenAccept(it -> assertThat(it, is("Hello World!")))
+                .forSingle(it -> assertThat(it, is("Hello World!")))
 {{/media-json}}
-        .await();
+        .await(Duration.ofSeconds(2));
     }
 
 }

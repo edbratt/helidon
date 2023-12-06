@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2022 Oracle and/or its affiliates.
+ * Copyright (c) 2017, 2023 Oracle and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -80,6 +80,7 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
     private final ReferenceQueue<Object> queues;
     private final long maxPayloadSize;
     private final Runnable clearQueues;
+    private final SocketConfiguration soConfig;
     private final DirectHandlers directHandlers;
 
     // this field is always accessed by the very same thread; as such, it doesn't need to be
@@ -98,14 +99,15 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
                       SSLEngine sslEngine,
                       ReferenceQueue<Object> queues,
                       Runnable clearQueues,
-                      long maxPayloadSize,
+                      SocketConfiguration soConfig,
                       DirectHandlers directHandlers) {
         this.routing = routing;
         this.webServer = webServer;
         this.sslEngine = sslEngine;
         this.queues = queues;
-        this.maxPayloadSize = maxPayloadSize;
+        this.maxPayloadSize = soConfig.maxPayloadSize();
         this.clearQueues = clearQueues;
+        this.soConfig = soConfig;
         this.directHandlers = directHandlers;
     }
 
@@ -127,16 +129,16 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
             if (lastContent) {
                 // if the last thing that went through channelRead0 was LastHttpContent, then
                 // there is no request handler that should be enforcing backpressure
-                LOGGER.fine(() -> log("Read complete lastContent", ctx));
+                LOGGER.fine(() -> formatMsg("Read complete lastContent", ctx));
                 ctx.channel().config().setAutoRead(true);
             } else {
-                LOGGER.fine(() -> log("Read complete not lastContent", ctx));
+                LOGGER.fine(() -> formatMsg("Read complete not lastContent", ctx));
             }
             return;
         }
 
         if (requestContext.hasRequests()) {
-            LOGGER.fine(() -> log("Read complete has requests: %s", ctx, requestContext));
+            LOGGER.fine(() -> formatMsg("Read complete has requests: %s", ctx, requestContext));
             ctx.channel().read();
         }
     }
@@ -165,7 +167,7 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
 
         if (msg instanceof HttpContent) {
             if (requestContext == null) {
-                LOGGER.fine(() -> log("Received HttpContent: %s", ctx, System.identityHashCode(msg)));
+                LOGGER.fine(() -> formatMsg("Received HttpContent: %s", ctx, System.identityHashCode(msg)));
                 HelidonMdc.remove(MDC_SCOPE_ID);
                 throw new IllegalStateException("There is no request context associated with this http content. "
                                                 + "This is never expected to happen!");
@@ -183,7 +185,7 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
 
     private void channelReadHttpContent(ChannelHandlerContext ctx, Object msg) {
         if (LOGGER.isLoggable(Level.FINE)) {
-            LOGGER.fine(log("Received HttpContent: %s", ctx, System.identityHashCode(msg)));
+            LOGGER.fine(formatMsg("Received HttpContent: %s", ctx, System.identityHashCode(msg)));
         }
         lastContent = false;
 
@@ -199,7 +201,7 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
                 // consumed; if not, the request might proceed when payload is small enough
                 requestEntityAnalyzed.complete(ChannelFutureListener.CLOSE);
                 if (LOGGER.isLoggable(Level.FINER)) {
-                    LOGGER.finer(log("Closing connection illegal payload; method: ", ctx, method));
+                    LOGGER.finer(formatMsg("Closing connection illegal payload; method: ", ctx, method));
                 }
                 throw new BadRequestException("It is illegal to send a payload with http method: " + method);
             }
@@ -207,15 +209,13 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
             // compliance with RFC 7231
             if (requestContext.responseCompleted() && !(msg instanceof LastHttpContent)) {
                 // payload is not consumed and the response is already sent; we must close the connection
-                LOGGER.finer(() -> log("Closing connection unconsumed payload; method: ", ctx, method));
+                LOGGER.finer(() -> formatMsg("Closing connection unconsumed payload; method: ", ctx, method));
                 ctx.close();
             } else if (!ignorePayload) {
                 // Check payload size if a maximum has been set
                 if (maxPayloadSize >= 0) {
                     actualPayloadSize += content.readableBytes();
                     if (actualPayloadSize > maxPayloadSize) {
-                        LOGGER.finer(() -> log("Chunked Payload over max %d > %d", ctx,
-                                               actualPayloadSize, maxPayloadSize));
                         ignorePayload = true;
                         send413PayloadTooLarge(ctx, requestContext.request());
                     } else {
@@ -229,7 +229,7 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
 
         if (msg instanceof LastHttpContent) {
             if (LOGGER.isLoggable(Level.FINE)) {
-                LOGGER.fine(log("Received LastHttpContent: %s", ctx, System.identityHashCode(msg)));
+                LOGGER.fine(formatMsg("Received LastHttpContent: %s", ctx, System.identityHashCode(msg)));
             }
 
             lastContent = true;
@@ -255,7 +255,7 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
     @SuppressWarnings("checkstyle:methodlength")
     private boolean channelReadHttpRequest(ChannelHandlerContext ctx, Context requestScope, Object msg) {
         if (LOGGER.isLoggable(Level.FINE)) {
-            LOGGER.fine(log("Received HttpRequest: %s. Remote address: %s. Scope id: %s",
+            LOGGER.fine(formatMsg("Received HttpRequest: %s. Remote address: %s. Scope id: %s",
                                   ctx,
                                   System.identityHashCode(msg),
                                   ctx.channel().remoteAddress(),
@@ -276,13 +276,12 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
         try {
             checkDecoderResult(request);
         } catch (Throwable e) {
-            LOGGER.finest(() -> log("Invalid HTTP request. %s", ctx, e.getMessage()));
-            send400BadRequest(ctx, request, e);
+            send400BadRequest(ctx, request, e, formatMsg("Invalid HTTP request. %s", ctx, e.getMessage()));
             return true;
         }
 
         if (LOGGER.isLoggable(Level.FINEST)) {
-            LOGGER.finest(log("Requested URI: %s %s", ctx, request.method(), request.uri()));
+            LOGGER.finest(formatMsg("Requested URI: %s %s", ctx, request.method(), request.uri()));
         }
 
         // Certificate management
@@ -302,7 +301,7 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
         // Context, publisher and DataChunk queue for this request/response
         DataChunkHoldingQueue queue = new DataChunkHoldingQueue();
         HttpRequestScopedPublisher publisher = new HttpRequestScopedPublisher(queue);
-        requestContext = new RequestContext(publisher, request, requestScope);
+        requestContext = new RequestContext(publisher, request, requestScope, soConfig);
 
         // Closure local variables that cache mutable instance variables
         RequestContext requestContextRef = requestContext;
@@ -314,43 +313,50 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
         IndirectReference<HttpRequestScopedPublisher, DataChunkHoldingQueue> publisherRef =
                 new IndirectReference<>(publisher, queues, queue);
 
+        CompletableFuture<Boolean> entityRequested = new CompletableFuture<>();
+
         // Set up read strategy for channel based on consumer demand
         publisher.onRequest((n, demand) -> {
+            entityRequested.complete(true);
             if (publisher.isUnbounded()) {
-                LOGGER.finest(() -> log("Netty autoread: true", ctx));
+                LOGGER.finest(() -> formatMsg("Netty autoread: true", ctx));
                 ctx.channel().config().setAutoRead(true);
             } else {
-                LOGGER.finest(() -> log("Netty autoread: false", ctx));
+                LOGGER.finest(() -> formatMsg("Netty autoread: false", ctx));
                 ctx.channel().config().setAutoRead(false);
             }
 
             if (publisher.hasRequests()) {
-                LOGGER.finest(() -> log("Requesting next (%d, %d) chunks from Netty", ctx, n, demand));
+                LOGGER.finest(() -> formatMsg("Requesting next (%d, %d) chunks from Netty", ctx, n, demand));
                 ctx.channel().read();
             } else {
-                LOGGER.finest(() -> log("No hook action required", ctx));
+                LOGGER.finest(() -> formatMsg("No hook action required", ctx));
             }
         });
 
         // New request ID
         long requestId = REQUEST_ID_GENERATOR.incrementAndGet();
 
+
+        requestEntityAnalyzed = new CompletableFuture<>();
+
         // If a problem with the request URI, return 400 response
         BareRequestImpl bareRequest;
         try {
-            bareRequest = new BareRequestImpl(request,
-                                              requestContextRef.publisher(),
-                                              webServer,
-                                              ctx,
+            bareRequest = new BareRequestImpl(webServer,
+                                              soConfig,
                                               sslEngine,
+                                              ctx,
+                                              request,
+                                              requestContextRef.publisher(),
                                               requestId);
         } catch (IllegalArgumentException e) {
-            send400BadRequest(ctx, request, e);
+            send400BadRequest(ctx, request, e, "Malformed URI in request");
             return true;
         }
 
         if (LOGGER.isLoggable(Level.FINEST)) {
-            LOGGER.finest(log("Request id: %s", ctx, bareRequest.requestId()));
+            LOGGER.finest(formatMsg("Request id: %s", ctx, bareRequest.requestId()));
         }
 
         String contentLength = request.headers().get(HttpHeaderNames.CONTENT_LENGTH);
@@ -372,14 +378,13 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
                 try {
                     long value = Long.parseLong(contentLength);
                     if (value > maxPayloadSize) {
-                        LOGGER.fine(() -> log("Payload length over max %d > %d", ctx, value, maxPayloadSize));
                         ignorePayload = true;
                         send413PayloadTooLarge(ctx, request);
                         return true;
                     }
                 } catch (NumberFormatException e) {
                     // this cannot happen, content length is validated in decoder
-                    send400BadRequest(ctx, request, e);
+                    send400BadRequest(ctx, request, e, "Invalid Content-Length header value");
                     return true;
                 }
             }
@@ -390,8 +395,6 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
             prevRequestFuture = null;
         }
 
-        requestEntityAnalyzed = new CompletableFuture<>();
-
         //If the keep alive is not set, we know we will be closing the connection
         if (!HttpUtil.isKeepAlive(requestContext.request())) {
             this.requestEntityAnalyzed.complete(ChannelFutureListener.CLOSE);
@@ -399,10 +402,12 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
         // Create response and handler for its completion
         BareResponseImpl bareResponse =
                 new BareResponseImpl(ctx,
+                                     entityRequested,
                                      request,
                                      requestContext,
                                      prevRequestFuture,
                                      requestEntityAnalyzed,
+                                     soConfig,
                                      requestId);
         prevRequestFuture = new CompletableFuture<>();
         CompletableFuture<?> thisResp = prevRequestFuture;
@@ -410,7 +415,7 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
                 .thenRun(() -> {
                     // Mark response completed in context
                     requestContextRef.responseCompleted(true);
-
+                    entityRequested.complete(false);
                     // Consume and release any buffers in publisher
                     publisher.clearAndRelease();
 
@@ -425,15 +430,22 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
                     thisResp.complete(null);
 
                     if (LOGGER.isLoggable(Level.FINE)) {
-                        LOGGER.fine(log("Response complete: %s", ctx, System.identityHashCode(msg)));
+                        LOGGER.fine(formatMsg("Response complete: %s", ctx, System.identityHashCode(msg)));
                     }
                 });
-        /*
-        TODO we should only send continue in case the entity is request (e.g. we found a route and user started reading it)
-        This would solve connection close for 404 for requests with entity
-         */
-        if (HttpUtil.is100ContinueExpected(request)) {
-            send100Continue(ctx, request);
+
+
+        if (soConfig.continueImmediately()) {
+            if (HttpUtil.is100ContinueExpected(request)) {
+                send100Continue(ctx, request);
+            }
+        } else {
+            // Send 100 continue only when entity is actually requested
+            entityRequested.thenAccept(requestedByUser -> {
+                if (requestedByUser && HttpUtil.is100ContinueExpected(request)) {
+                    send100Continue(ctx, request);
+                }
+            });
         }
 
         // If a problem during routing, return 400 response
@@ -441,7 +453,7 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
             requestContext.runInScope(() -> routing.route(bareRequest, bareResponse));
         } catch (IllegalArgumentException e) {
             // this probably cannot happen
-            send400BadRequest(ctx, request, e);
+            send400BadRequest(ctx, request, e, "Exception encountered while routing request");
             return true;
         }
 
@@ -457,7 +469,7 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         // Log just cause as string
-        LOGGER.fine(() -> log("Exception caught: %s", ctx, cause.toString()));
+        LOGGER.fine(() -> formatMsg("Exception caught: %s", ctx, cause.toString()));
 
         // Log full exception in FINEST
         if (LOGGER.isLoggable(Level.FINEST)) {
@@ -477,7 +489,7 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
     private void checkDecoderResult(HttpRequest request) {
         DecoderResult decoderResult = request.decoderResult();
         if (decoderResult.isFailure()) {
-            LOGGER.info(() -> log("Request %s to %s rejected: %s", null,
+            LOGGER.info(() -> formatMsg("Request %s to %s rejected: %s", null,
                     request.method().asciiName(), request.uri(), decoderResult.cause().getMessage()));
             throw new BadRequestException(String.format("Request was rejected: %s", decoderResult.cause().getMessage()),
                     decoderResult.cause());
@@ -506,12 +518,12 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
      * @param request Netty HTTP request
      * @param t associated throwable
      */
-    private void send400BadRequest(ChannelHandlerContext ctx, HttpRequest request, Throwable t) {
+    private void send400BadRequest(ChannelHandlerContext ctx, HttpRequest request, Throwable t, String message) {
         TransportResponse handlerResponse = directHandlers.handler(DirectHandler.EventType.BAD_REQUEST)
                 .handle(new DirectHandlerRequest(request),
                         DirectHandler.EventType.BAD_REQUEST,
                         Http.Status.BAD_REQUEST_400,
-                        t);
+                        "Bad request, see server log for more information\n");
 
         FullHttpResponse response = toNettyResponse(handlerResponse);
         // 400 -> close connection
@@ -520,7 +532,14 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
         ctx.writeAndFlush(response)
                 .addListener(future -> ctx.close());
 
-        failPublisher(new Error("400: Bad request"));
+        // Log simple warning and more details if FINE level set
+        Error error = new Error("400: Bad request");
+        LOGGER.log(Level.WARNING, error::getMessage);
+        if (LOGGER.isLoggable(Level.FINE)) {
+            LOGGER.log(Level.FINE, message, error);
+        }
+
+        failPublisher(error);
     }
 
     /**
@@ -533,7 +552,7 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
                 .handle(new DirectHandlerRequest(request),
                         DirectHandler.EventType.PAYLOAD_TOO_LARGE,
                         Http.Status.REQUEST_ENTITY_TOO_LARGE_413,
-                        "");
+                        "Payload too large, see server log for more information\n");
 
         FullHttpResponse response = toNettyResponse(transportResponse);
         // too big entity -> close connection
@@ -542,7 +561,16 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
         ctx.writeAndFlush(response)
                 .addListener(future -> ctx.close());
 
-        failPublisher(new Error("413: Payload is too large"));
+        // Log simple warning and more details if FINE level set
+        Error error = new Error("413: Payload is too large");
+        LOGGER.log(Level.WARNING, error::getMessage);
+        if (LOGGER.isLoggable(Level.FINE)) {
+            LOGGER.log(Level.FINE, formatMsg("Chunked Payload over max %d > %d",
+                    ctx, actualPayloadSize, maxPayloadSize), error);
+        }
+
+        LOGGER.log(Level.WARNING, error, error::getMessage);
+        failPublisher(error);
     }
 
     private FullHttpResponse toNettyResponse(TransportResponse handlerResponse) {
@@ -583,7 +611,7 @@ public class ForwardingHandler extends SimpleChannelInboundHandler<Object> {
      * @param params template suffix params.
      * @return string to log.
      */
-    private String log(String template, ChannelHandlerContext ctx, Object... params) {
+    private String formatMsg(String template, ChannelHandlerContext ctx, Object... params) {
         List<Object> list = new ArrayList<>(params.length + 2);
         list.add(System.identityHashCode(this));
         list.add(ctx != null ? ctx.channel().id() : "N/A");

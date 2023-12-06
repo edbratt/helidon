@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2021 Oracle and/or its affiliates.
+ * Copyright (c) 2018, 2023 Oracle and/or its affiliates.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,12 +41,15 @@ import java.util.stream.Collectors;
 
 import io.helidon.common.Prioritized;
 import io.helidon.common.configurable.ServerThreadPoolSupplier;
+import io.helidon.common.context.Context;
+import io.helidon.common.context.Contexts;
 import io.helidon.common.http.Http;
 import io.helidon.config.Config;
-import io.helidon.microprofile.cdi.BuildTimeStart;
 import io.helidon.microprofile.cdi.RuntimeStart;
 import io.helidon.webserver.KeyPerformanceIndicatorSupport;
 import io.helidon.webserver.Routing;
+import io.helidon.webserver.ServerRequest;
+import io.helidon.webserver.ServerResponse;
 import io.helidon.webserver.Service;
 import io.helidon.webserver.WebServer;
 import io.helidon.webserver.jersey.JerseySupport;
@@ -56,8 +59,13 @@ import jakarta.annotation.Priority;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.context.BeforeDestroyed;
 import jakarta.enterprise.context.Initialized;
+import jakarta.enterprise.context.RequestScoped;
 import jakarta.enterprise.context.spi.CreationalContext;
 import jakarta.enterprise.event.Observes;
+import jakarta.enterprise.inject.Any;
+import jakarta.enterprise.inject.CreationException;
+import jakarta.enterprise.inject.Default;
+import jakarta.enterprise.inject.spi.AfterBeanDiscovery;
 import jakarta.enterprise.inject.spi.Bean;
 import jakarta.enterprise.inject.spi.BeanManager;
 import jakarta.enterprise.inject.spi.CDI;
@@ -111,15 +119,6 @@ public class ServerCdiExtension implements Extension {
 
     private final Set<Routing.Builder> routingsWithKPIMetrics = new HashSet<>();
 
-    private void buildTime(@Observes @BuildTimeStart Object event) {
-        // update the status of server, as we may have been started without a builder being used
-        // such as when cdi.Main or SeContainerInitializer are used
-        if (!IN_PROGRESS_OR_RUNNING.compareAndSet(false, true)) {
-            throw new IllegalStateException("There is another builder in progress, or another Server running. "
-                                                    + "You cannot run more than one in parallel");
-        }
-    }
-
     private void prepareRuntime(@Observes @RuntimeStart Config config) {
         serverBuilder.config(config.get("server"));
         this.config = config;
@@ -169,6 +168,12 @@ public class ServerCdiExtension implements Extension {
 
     private void startServer(@Observes @Priority(PLATFORM_AFTER + 100) @Initialized(ApplicationScoped.class) Object event,
                              BeanManager beanManager) {
+        // update the status of server, as we may have been started without a builder being used
+        // such as when cdi.Main or SeContainerInitializer are used
+        if (!IN_PROGRESS_OR_RUNNING.compareAndSet(false, true)) {
+            throw new IllegalStateException("There is another builder in progress, or another Server running. "
+                                                    + "You cannot run more than one in parallel");
+        }
 
         // make sure all configuration is in place
         if (null == jaxRsExecutorService) {
@@ -226,6 +231,27 @@ public class ServerCdiExtension implements Extension {
         STARTUP_LOGGER.finest("Server created");
     }
 
+    /**
+     * Make {@code ServerRequest} and {@code ServerResponse} available for injection
+     * via CDI by registering them as beans.
+     *
+     * @param event after bean discovery event
+     */
+    private void afterBeanDiscovery(@Observes AfterBeanDiscovery event) {
+        event.addBean()
+                .qualifiers(Set.of(Default.Literal.INSTANCE, Any.Literal.INSTANCE))
+                .addTransitiveTypeClosure(ServerRequest.class)
+                .scope(RequestScoped.class)
+                .createWith(cc -> Contexts.context().flatMap(c -> c.get(ServerRequest.class))
+                        .orElseThrow(() -> new CreationException("Unable to retrieve ServerRequest from context")));
+        event.addBean()
+                .qualifiers(Set.of(Default.Literal.INSTANCE, Any.Literal.INSTANCE))
+                .addTransitiveTypeClosure(ServerResponse.class)
+                .scope(RequestScoped.class)
+                .createWith(cc -> Contexts.context().flatMap(c -> c.get(ServerResponse.class))
+                        .orElseThrow(() -> new CreationException("Unable to retrieve ServerResponse from context")));
+    }
+
     private void registerJaxRsApplications(BeanManager beanManager) {
         JaxRsCdiExtension jaxRs = beanManager.getExtension(JaxRsCdiExtension.class);
 
@@ -251,12 +277,20 @@ public class ServerCdiExtension implements Extension {
                         .forEach(c -> shared.register(Bindings.serviceAsContract(c).to(ParamConverterProvider.class)));
                 instances.stream()
                         .flatMap(i -> i.getSingletons().stream())
-                        .filter(s -> s instanceof ParamConverterProvider)
+                        .filter(ParamConverterProvider.class::isInstance)
                         .forEach(s -> shared.register(Bindings.service(s)));
             }
 
-            // Add all applications
-            jaxRsApplications.forEach(it -> addApplication(jaxRs, it, shared));
+            // Add all applications making the Application subclass (if accessible via
+            // CDI) available in our context to be used by JAX-RS features
+            jaxRsApplications.forEach(it -> it.applicationClass()
+                    .flatMap(appClass -> CDI.current().select(appClass).stream().findFirst())
+                    .ifPresentOrElse(app -> {
+                        Context parent = Contexts.context().orElse(null);
+                        Context startupContext = Context.create(parent);
+                        startupContext.register(app);
+                        Contexts.runInContext(startupContext, () -> addApplication(jaxRs, it, shared));
+                    }, () -> addApplication(jaxRs, it, shared)));
         }
         STARTUP_LOGGER.finest("Registered jersey application(s)");
     }
@@ -288,9 +322,10 @@ public class ServerCdiExtension implements Extension {
         StaticContentSupport.FileSystemBuilder pBuilder = StaticContentSupport.builder(config.get("location")
                                                                                                .as(Path.class)
                                                                                                .get());
-        config.get("welcome")
+        pBuilder.welcomeFileName(config.get("welcome")
                 .asString()
-                .ifPresent(pBuilder::welcomeFileName);
+                .orElse("index.html"));
+
         StaticContentSupport staticContent = pBuilder.build();
 
         if (context.exists()) {
@@ -324,7 +359,7 @@ public class ServerCdiExtension implements Extension {
     private void stopServer(@Observes @Priority(PLATFORM_BEFORE) @BeforeDestroyed(ApplicationScoped.class) Object event) {
         try {
             if (started) {
-                doStop(event);
+                doStop();
             }
         } finally {
             // as there only can be a single CDI in a single JVM, once this CDI is shutting down, we
@@ -333,7 +368,7 @@ public class ServerCdiExtension implements Extension {
         }
     }
 
-    private void doStop(Object event) {
+    private void doStop() {
         if (null == webserver || !started) {
             // nothing to do
             return;
